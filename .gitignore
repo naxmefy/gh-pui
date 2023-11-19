@@ -1,2 +1,6 @@
 /gh-pui
 /gh-pui.exe
+
+# editors
+.idea/
+.vscode/
