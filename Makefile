@@ -22,3 +22,6 @@ link: build
 		echo "Empty"; \
 	fi
 	gh extension install .
+
+run:
+	@go run main.go
