@@ -2,41 +2,32 @@ package main
 
 import (
 	"fmt"
-	"github.com/naxmefy/gh-pui/internal/ui"
-	"log"
+	"os"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/cli/go-gh/v2/pkg/api"
+	"github.com/naxmefy/gh-pui/internal/ui"
 )
 
-func createModel() ui.Model {
-	return ui.NewModel()
-}
-
 func main() {
-	model := createModel()
-
-	p := tea.NewProgram(model, tea.WithAltScreen())
-	if _, err := p.Run(); err != nil {
-		log.Fatal(err)
+	if err := run(); err != nil {
+		fmt.Fprintln(os.Stderr, "gh pui:", err)
+		os.Exit(1)
 	}
 }
 
-func example() {
-	fmt.Println("hello world, this is the gh-pui extension!")
-	client, err := api.DefaultRESTClient()
+func run() error {
+	client, err := api.DefaultGraphQLClient()
 	if err != nil {
-		fmt.Println(err)
-		return
+		return fmt.Errorf("not authenticated, run `gh auth login`: %w", err)
 	}
-	response := struct{ Login string }{}
-	err = client.Get("user", &response)
-	if err != nil {
-		fmt.Println(err)
-		return
+	var query struct {
+		Viewer struct{ Login string }
 	}
-	fmt.Printf("running as %s\n", response.Login)
-}
+	if err := client.Query("Viewer", &query, nil); err != nil {
+		return err
+	}
 
-// For more examples of using go-gh, see:
-// https://github.com/cli/go-gh/blob/trunk/example_gh_test.go
+	_, err = tea.NewProgram(ui.NewModel(query.Viewer.Login)).Run()
+	return err
+}
