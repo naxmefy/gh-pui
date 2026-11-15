@@ -53,14 +53,15 @@ func goldenProject() *project.Project {
 	return &project.Project{
 		Owner: "acme", Number: 7, Title: "App roadmap",
 		Fields: []project.Field{
-			{Name: "Status", DataType: "SINGLE_SELECT", Options: []project.Option{{Name: "Todo"}, {Name: "In Progress"}, {Name: "Done"}}},
+			{Name: "Status", DataType: "SINGLE_SELECT", Options: []project.Option{{Name: "Todo", Color: "GRAY"}, {Name: "In Progress", Color: "YELLOW"}, {Name: "Done", Color: "PURPLE"}}},
 			{Name: "Estimate", DataType: "NUMBER"},
 		},
 		Views: []project.View{
 			{Number: 1, Name: "Backlog by status", GroupBy: []string{"Status"},
 				VisibleFields: []string{"Title", "Assignees", "Status", "Labels", "Estimate", "Milestone", "Repository", "Linked pull requests"}},
-			{Number: 2, Name: "Board", Layout: "BOARD_LAYOUT"},
-			{Number: 3, Name: "Roadmap", Layout: "ROADMAP_LAYOUT"},
+			{Number: 2, Name: "All items", VisibleFields: []string{"Title", "Status", "Assignees", "Estimate"}},
+			{Number: 3, Name: "Board", Layout: "BOARD_LAYOUT"},
+			{Number: 4, Name: "Roadmap", Layout: "ROADMAP_LAYOUT"},
 		},
 		Items: []project.Item{
 			issue("a", 12, "Login with passkeys", "OPEN", map[string]project.Value{"Status": v("In Progress"), "Assignees": v("mona"), "Labels": v("auth, feature"), "Estimate": n(5, "5"), "Milestone": v("v1.0"), "Repository": v("acme/app"), "Parent issue": v("#3 Accounts"), "Sub-issues progress": v("1/3")}),
@@ -90,6 +91,7 @@ func TestGoldenScreens(t *testing.T) {
 
 		m, _ := NewModel("mona", goldenProject(), th, keys).Update(size)
 		screens["table"] = drive(m, "down") // cursor on an item, so the peek is filled
+		screens["table-ungrouped"] = drive(m, "tab", "down", "l")
 
 		var app tea.Model = NewApp("mona", th, keys, NewPicker(th, lister, Page{Title: "Choose an owner", Subtitle: "Not in a GitHub repo", Entries: OwnerEntries("mona", "acme")}), load, source, nil, nil)
 		app, _ = app.Update(size)

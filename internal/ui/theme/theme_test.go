@@ -55,3 +55,20 @@ func TestCustomColorsAndSymbols(t *testing.T) {
 		t.Error("unknown color role should fail")
 	}
 }
+
+func TestSelectedFallsBackToReverse(t *testing.T) {
+	th, _ := New(config.Default(), "ansi")
+	if !th.Selected().GetReverse() {
+		t.Error("default selection should be reverse video")
+	}
+	cfg := config.Default()
+	cfg.Colors = map[string]string{"selected": "236"}
+	th, _ = New(cfg, "ansi")
+	if th.Selected().GetReverse() {
+		t.Error("a configured selected color should paint the background instead")
+	}
+	th, _ = New(cfg, "none")
+	if !th.Selected().GetReverse() {
+		t.Error("theme none must stay on reverse video")
+	}
+}

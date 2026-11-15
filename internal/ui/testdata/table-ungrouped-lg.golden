@@ -1,0 +1,24 @@
+ gh pui › acme › #7 App roadmap  6 items                                                                                                                  @mona 
+ 1 ▤ Backlog by status   2 ▤ All items   3 ▥ Board  4 ▬ Roadmap
+   TITLE                                                                                                                      STATUS         ASSIGNEES  ESTIMATE
+ ○ app#12 Login with passkeys                                                                                                 ● In Progress  mona       5       
+▌○ app#15 Crash when the cache directory is read-only                                                                         ● Todo         hubot      2       
+ ◌ draft Sketch the onboarding flow                                                                                           ● Todo         —          3       
+ ◆ app#18 Add passkey endpoints                                                                                               ● Done         mona       —       
+ ● app#9 Document the release process                                                                                         ● Done         —          1       
+ ○ app#21 Settings page                                                                                                       —              —          —       
+
+
+
+
+
+
+
+
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ issue · acme/app#15 · open
+ Crash when the cache directory is read-only
+ Status: Todo · Assignees: hubot · Labels: bug
+ TABLE   j/k move  h/l column  e edit  enter fold  tab view  ctrl+p projects  q quit                                                          row 2/6 · col 2/4 

@@ -55,7 +55,3 @@ func NewKeyMap(overrides map[string][]string) (KeyMap, error) {
 	}
 	return km, nil
 }
-
-func (k KeyMap) help() []key.Binding {
-	return []key.Binding{k.Down, k.Up, k.Edit, k.Toggle, k.NextView, k.Switch, k.Quit}
-}

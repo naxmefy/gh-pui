@@ -56,7 +56,7 @@ func TestWindowSizeSetsBreakpoint(t *testing.T) {
 
 func TestTableShowsGroupsSumsAndPeek(t *testing.T) {
 	s := screen(newTestModel(t))
-	for _, want := range []string{"Todo  2 · Estimate 6", "Done  1 · Estimate 2", "No Status  1", "Estimate", "B", "By status"} {
+	for _, want := range []string{"Todo  2 items · Σ Estimate 6", "Done  1 item · Σ Estimate 2", "No Status  1 item", "Estimate", "B", "By status"} {
 		if !strings.Contains(s, want) {
 			t.Errorf("screen lacks %q:\n%s", want, s)
 		}
@@ -88,5 +88,17 @@ func TestFoldGroupAndSwitchView(t *testing.T) {
 	}
 	if s2 := screen(press(m, "2")); s2 != s {
 		t.Errorf("digit shortcut should select view 2")
+	}
+}
+
+func TestXSCardsScrollAndStatusbar(t *testing.T) {
+	m, _ := newTestModel(t).Update(tea.WindowSizeMsg{Width: 50, Height: 8})
+	m = press(m, "G") // last item C sits below several two-line cards
+	s := screen(m)
+	if !strings.Contains(s, "▌○") || !strings.Contains(s, "  C") || !strings.Contains(s, "TBL") || !strings.Contains(s, "4/4") {
+		t.Errorf("cursor card not visible or statusbar wrong:\n%s", s)
+	}
+	if n := strings.Count(s, "\n") + 1; n != 8 {
+		t.Errorf("screen has %d lines, want 8:\n%s", n, s)
 	}
 }

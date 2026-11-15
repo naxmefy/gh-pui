@@ -192,29 +192,52 @@ func (m *Model) selectView(i int) {
 	m.view, m.cursor, m.offset = (i%n+n)%n, 0, 0
 }
 
-// clamp keeps the cursor inside the rows and the scroll offset around the cursor.
+// clamp keeps the cursor inside the rows and the scroll offset around the cursor; rows can be two lines high (xs cards).
 func (m *Model) clamp() {
 	_, rs, _ := m.table()
 	m.cursor = max(0, min(m.cursor, len(rs)-1))
 	cols, _ := m.visibleCols(rs)
 	m.col = max(0, min(m.col, len(cols)-1))
-	visible := m.bodyHeight()
-	if m.cursor < m.offset {
-		m.offset = m.cursor
+	body := m.bodyHeight()
+	m.offset = max(0, min(m.offset, m.cursor))
+	for m.offset < m.cursor && m.linesBetween(rs, m.offset, m.cursor+1) > body {
+		m.offset++
 	}
-	if m.cursor >= m.offset+visible {
-		m.offset = m.cursor - visible + 1
+	for m.offset > 0 && m.linesBetween(rs, m.offset-1, len(rs)) <= body { // no empty space below the last row
+		m.offset--
 	}
-	m.offset = max(0, min(m.offset, len(rs)-visible))
+}
+
+func (m Model) rowLines(r row) int {
+	if r.item != nil && m.bp == layout.XS {
+		return 2
+	}
+	return 1
+}
+
+func (m Model) linesBetween(rs []row, from, to int) int {
+	n := 0
+	for _, r := range rs[from:to] {
+		n += m.rowLines(r)
+	}
+	return n
 }
 
 const peekHeight = 4
 
-func (m Model) showPeek() bool { return m.height >= 20 }
+func (m Model) showPeek() bool { return m.height >= 20 && m.bp > layout.XS }
 
-// bodyHeight is the number of table rows that fit: total minus tabs, column header, help and peek.
+// chromeHeight: header, tabs, column header and statusbar; xs folds the tabs into the header and has no column header.
+func (m Model) chromeHeight() int {
+	if m.bp == layout.XS {
+		return 2
+	}
+	return 4
+}
+
+// bodyHeight is the number of lines left for table rows.
 func (m Model) bodyHeight() int {
-	h := m.height - 3
+	h := m.height - m.chromeHeight()
 	if m.showPeek() {
 		h -= peekHeight
 	}
@@ -225,21 +248,25 @@ func (m Model) View() tea.View {
 	groups, rs, _ := m.table()
 	cols, widths := m.visibleCols(rs)
 
-	lines := []string{m.renderTabs(), m.renderHeader(cols, widths)}
-	end := min(len(rs), m.offset+m.bodyHeight())
-	for i := m.offset; i < end; i++ {
-		lines = append(lines, m.renderRow(rs[i], groups, cols, widths, i == m.cursor))
+	lines := []string{m.renderTop()}
+	if m.bp > layout.XS {
+		lines = append(lines, m.renderTabs(), m.renderColumns(cols, widths))
+	}
+	body := m.bodyHeight()
+	for i, used := m.offset, 0; i < len(rs) && used+m.rowLines(rs[i]) <= body; i++ {
+		lines = append(lines, m.renderRow(rs[i], groups, cols, widths, i == m.cursor)...)
+		used += m.rowLines(rs[i])
 	}
 	if len(rs) == 0 {
 		lines = append(lines, m.theme.Fg("muted").Render(" No items in this view"))
 	}
-	for len(lines) < 2+m.bodyHeight() {
+	for len(lines) < m.chromeHeight()-1+body {
 		lines = append(lines, "")
 	}
 	if m.showPeek() {
 		lines = append(lines, m.renderPeek(rs)...)
 	}
-	lines = append(lines, m.renderHelp())
+	lines = append(lines, m.renderStatus(rs))
 
 	content := strings.Join(lines, "\n")
 	if m.edit != nil {
@@ -250,31 +277,116 @@ func (m Model) View() tea.View {
 	return out
 }
 
-func (m Model) renderTabs() string {
-	t := m.theme
-	parts := []string{t.Fg("accent").Bold(true).Render(fmt.Sprintf(" %s/%d %s", m.project.Owner, m.project.Number, m.project.Title))}
-	for i, v := range m.project.Views {
-		label := v.Name
-		if m.bp <= layout.SM { // narrow: tabs become their number shortcuts
-			label = strconv.Itoa(i + 1)
-		}
-		if i == m.view {
-			parts = append(parts, t.Fg("accent").Underline(true).Render(label))
-		} else {
-			parts = append(parts, t.Fg("muted").Render(label))
-		}
-	}
-	return ansi.Truncate(strings.Join(parts, "  "), m.width, "…")
+// spread puts left and right on one line of the full width, cutting left when both do not fit.
+func (m Model) spread(left, right string) string {
+	left = ansi.Truncate(left, max(0, m.width-ansi.StringWidth(right)-1), "…")
+	return left + strings.Repeat(" ", max(1, m.width-ansi.StringWidth(left)-ansi.StringWidth(right))) + right
 }
 
-func cellText(it *project.Item, col string) string {
-	if col == "Title" {
-		if it.Number > 0 {
-			return fmt.Sprintf("%s #%d", it.Title, it.Number)
-		}
-		return it.Title
+func (m Model) layoutGlyph(v project.View) string {
+	switch v.Layout {
+	case "BOARD_LAYOUT":
+		return m.theme.Symbol("layout.board")
+	case "ROADMAP_LAYOUT":
+		return m.theme.Symbol("layout.roadmap")
 	}
-	return it.Values[col].Text
+	return m.theme.Symbol("layout.table")
+}
+
+// renderTop is the breadcrumb bar; it drops the owner and item count as the width shrinks.
+func (m Model) renderTop() string {
+	t, p := m.theme, m.project
+	sep := t.Fg("muted").Render(" " + t.Symbol("sep") + " ")
+	root := t.Fg("accent").Bold(true).Render("gh pui")
+	title := lipgloss.NewStyle().Bold(true).Render(fmt.Sprintf("#%d %s", p.Number, p.Title))
+	right := t.Fg("muted").Render("@" + m.login + " ")
+	var left string
+	switch {
+	case m.bp == layout.XS:
+		left = " " + title
+		if n := len(p.Views); n > 0 {
+			right = t.Badge("accent").Render(fmt.Sprintf(" %s %d/%d ", m.layoutGlyph(m.currentView()), m.view+1, n))
+		}
+	case m.bp <= layout.MD:
+		left = " " + root + sep + title
+	default:
+		items := 0
+		for _, it := range p.Items {
+			if !it.Archived {
+				items++
+			}
+		}
+		left = " " + root + sep + t.Fg("muted").Render(p.Owner) + sep + title + t.Fg("muted").Render(fmt.Sprintf("  %d items", items))
+	}
+	return m.spread(left, right)
+}
+
+// renderTabs shows every view as `n glyph name`; on sm only the active tab keeps its name.
+func (m Model) renderTabs() string {
+	t := m.theme
+	var parts []string
+	for i, v := range m.project.Views {
+		label := fmt.Sprintf("%d %s %s", i+1, m.layoutGlyph(v), v.Name)
+		if i == m.view {
+			parts = append(parts, t.Badge("accent").Render(" "+label+" "))
+			continue
+		}
+		if m.bp == layout.SM {
+			label = fmt.Sprintf("%d%s", i+1, m.layoutGlyph(v))
+		}
+		parts = append(parts, t.Fg("muted").Render(label))
+	}
+	return ansi.Truncate(" "+strings.Join(parts, "  "), m.width, "…")
+}
+
+// prefix is the muted part before a title: repo#number, or "draft".
+func prefix(it *project.Item) string {
+	switch {
+	case it.Type == "DRAFT_ISSUE":
+		return "draft"
+	case it.Number == 0:
+		return ""
+	case it.Repo != "":
+		_, name, _ := strings.Cut(it.Repo, "/")
+		return fmt.Sprintf("%s#%d", name, it.Number)
+	}
+	return fmt.Sprintf("#%d", it.Number)
+}
+
+// optionRole is the color role of a single-select value, e.g. "option.green" for a green Status option.
+func (m Model) optionRole(field, value string) string {
+	for _, f := range m.project.Fields {
+		if f.Name != field || f.DataType != "SINGLE_SELECT" {
+			continue
+		}
+		for _, o := range f.Options {
+			if o.Name == value && o.Color != "" {
+				return "option." + strings.ToLower(o.Color)
+			}
+		}
+	}
+	return ""
+}
+
+// cell returns a cell's plain text (for widths and the inverted cursor row) and its styled form.
+func (m Model) cell(it *project.Item, col string) (plain, styled string) {
+	t := m.theme
+	if col == "Title" {
+		pre := prefix(it)
+		if pre == "" {
+			return it.Title, it.Title
+		}
+		return pre + " " + it.Title, t.Fg("muted").Render(pre) + " " + it.Title
+	}
+	v := it.Values[col].Text
+	if v == "" {
+		return t.Symbol("empty"), t.Fg("muted").Render(t.Symbol("empty"))
+	}
+	if role := m.optionRole(col, v); role != "" {
+		dot := t.Symbol("dot")
+		return dot + " " + v, t.Fg(role).Render(dot) + " " + v
+	}
+	return v, v
 }
 
 // visibleCols are the view's columns that fit the width, with their widths.
@@ -293,7 +405,8 @@ func (m Model) columnWidths(cols []string, rs []row) []int {
 		w := ansi.StringWidth(c)
 		for _, r := range rs {
 			if r.item != nil {
-				w = max(w, ansi.StringWidth(cellText(r.item, c)))
+				plain, _ := m.cell(r.item, c)
+				w = max(w, ansi.StringWidth(plain))
 			}
 		}
 		widths[ci+1] = min(w, maxCol)
@@ -316,12 +429,12 @@ func pad(s string, w int) string {
 	return s + strings.Repeat(" ", max(0, w-ansi.StringWidth(s)))
 }
 
-func (m Model) renderHeader(cols []string, widths []int) string {
-	cells := []string{"   " + pad(cols[0], widths[0])}
+func (m Model) renderColumns(cols []string, widths []int) string {
+	cells := []string{"   " + pad(strings.ToUpper(cols[0]), widths[0])}
 	for i, c := range cols[1:] {
-		cells = append(cells, pad(c, widths[i+1]))
+		cells = append(cells, pad(strings.ToUpper(c), widths[i+1]))
 	}
-	return m.theme.Fg("muted").Bold(true).Render(strings.Join(cells, "  "))
+	return ansi.Truncate(m.theme.Fg("muted").Render(strings.Join(cells, "  ")), m.width, "")
 }
 
 func (m Model) symbol(it *project.Item) string {
@@ -339,54 +452,97 @@ func (m Model) symbol(it *project.Item) string {
 	return t.Fg("success").Render(t.Symbol("issue"))
 }
 
-func (m Model) renderRow(r row, groups []group, cols []string, widths []int, selected bool) string {
+// renderRow draws a group header or an item: one line, or a two-line card on xs.
+func (m Model) renderRow(r row, groups []group, cols []string, widths []int, selected bool) []string {
 	t := m.theme
-	var line string
 	if r.item == nil {
 		g := groups[r.group]
 		fold := t.Symbol("expanded")
 		if m.collapsed[m.view][g.Key] {
 			fold = t.Symbol("collapsed")
 		}
-		meta := []string{strconv.Itoa(len(g.Items))}
+		dot := ""
+		if v := m.currentView(); len(v.GroupBy) > 0 {
+			if role := m.optionRole(v.GroupBy[0], g.Key); role != "" {
+				dot = t.Fg(role).Render(t.Symbol("dot")) + " "
+			}
+		}
+		meta := []string{fmt.Sprintf("%d items", len(g.Items))}
+		if len(g.Items) == 1 {
+			meta[0] = "1 item"
+		}
+		if m.bp == layout.XS {
+			meta = []string{strconv.Itoa(len(g.Items))}
+		}
 		for _, s := range g.Sums {
-			meta = append(meta, s.Field+" "+strconv.FormatFloat(s.Value, 'f', -1, 64))
+			meta = append(meta, "Σ "+s.Field+" "+strconv.FormatFloat(s.Value, 'f', -1, 64))
 		}
-		line = " " + fold + " " + t.Fg("accent").Bold(true).Render(g.Label) + "  " + t.Fg("muted").Render(strings.Join(meta, " · "))
-	} else if selected {
-		// inverted row, the focused cell un-inverted and underlined; works on every color profile, including none
-		rev, focus := lipgloss.NewStyle().Reverse(true), lipgloss.NewStyle().Bold(true).Underline(true)
-		var b strings.Builder
-		b.WriteString(rev.Render(" " + ansi.Strip(m.symbol(r.item)) + " "))
-		for i, c := range cols {
-			if i > 0 {
-				b.WriteString(rev.Render("  "))
-			}
-			st := rev
-			if i == m.col {
-				st = focus
-			}
-			b.WriteString(st.Render(pad(cellText(r.item, c), widths[i])))
+		line := " " + fold + " " + dot + lipgloss.NewStyle().Bold(true).Render(g.Label) + "  " + t.Fg("muted").Render(strings.Join(meta, " · "))
+		if selected {
+			return []string{t.Selected().Render(pad(ansi.Strip(line), m.width))}
 		}
-		b.WriteString(rev.Render(strings.Repeat(" ", max(0, m.width-ansi.StringWidth(b.String())))))
-		return ansi.Truncate(b.String(), m.width, "")
-	} else {
-		cells := []string{" " + m.symbol(r.item) + " " + pad(cellText(r.item, cols[0]), widths[0])}
-		for i, c := range cols[1:] {
-			cells = append(cells, pad(cellText(r.item, c), widths[i+1]))
-		}
-		line = strings.Join(cells, "  ")
+		return []string{ansi.Truncate(line, m.width, "…")}
+	}
+
+	it := r.item
+	lead := " "
+	if selected {
+		lead = t.Fg("accent").Render(t.Symbol("bar"))
+	}
+	if m.bp == layout.XS {
+		return m.renderCard(it, lead, selected)
 	}
 	if selected {
-		// inverted selection works on every color profile, including none
-		return lipgloss.NewStyle().Reverse(true).Render(pad(ansi.Strip(line), m.width))
+		// the cursor row is inverted (or the "selected" background); a focused field cell stands out un-inverted and underlined
+		sel, focus := t.Selected(), lipgloss.NewStyle().Bold(true).Underline(true)
+		var b strings.Builder
+		b.WriteString(lead + sel.Render(ansi.Strip(m.symbol(it))+" "))
+		for i, c := range cols {
+			if i > 0 {
+				b.WriteString(sel.Render("  "))
+			}
+			st := sel
+			if i == m.col && i > 0 { // the title column is the default, it needs no extra mark
+				st = focus
+			}
+			plain, _ := m.cell(it, c)
+			b.WriteString(st.Render(pad(plain, widths[i])))
+		}
+		b.WriteString(sel.Render(strings.Repeat(" ", max(0, m.width-ansi.StringWidth(b.String())))))
+		return []string{ansi.Truncate(b.String(), m.width, "")}
 	}
-	return ansi.Truncate(line, m.width, "…")
+	cells := make([]string, len(cols))
+	for i, c := range cols {
+		_, styled := m.cell(it, c)
+		cells[i] = pad(styled, widths[i])
+	}
+	return []string{ansi.Truncate(lead+m.symbol(it)+" "+strings.Join(cells, "  "), m.width, "…")}
+}
+
+// renderCard is the xs form of an item: `symbol repo#num` with a few field values on the right, then the title.
+func (m Model) renderCard(it *project.Item, lead string, selected bool) []string {
+	t := m.theme
+	var vals []string
+	for _, c := range columns(m.currentView(), layout.MD)[1:] {
+		if v := it.Values[c].Text; v != "" && len(vals) < 2 {
+			vals = append(vals, v)
+		}
+	}
+	first := m.symbol(it) + " " + t.Fg("muted").Render(prefix(it))
+	right := strings.Join(vals, " ") + " "
+	first = ansi.Truncate(first, max(0, m.width-1-ansi.StringWidth(right)-1), "…")
+	first += strings.Repeat(" ", max(1, m.width-1-ansi.StringWidth(first)-ansi.StringWidth(right))) + right
+	second := ansi.Truncate("  "+it.Title, m.width-1, "…")
+	if selected {
+		sel := t.Selected()
+		return []string{lead + sel.Render(pad(ansi.Strip(first), m.width-1)), " " + sel.Render(pad(second, m.width-1))}
+	}
+	return []string{lead + first, " " + second}
 }
 
 func (m Model) renderPeek(rs []row) []string {
 	t := m.theme
-	lines := []string{t.Fg("border").Render(strings.Repeat("─", m.width))}
+	lines := []string{t.Fg("accent").Render(strings.Repeat("─", m.width))}
 	if len(rs) == 0 || rs[m.cursor].item == nil {
 		return append(lines, "", "", "")
 	}
@@ -407,18 +563,82 @@ func (m Model) renderPeek(rs []row) []string {
 		ansi.Truncate(" "+strings.Join(fields, " · "), m.width, "…"))
 }
 
-func (m Model) renderHelp() string {
-	if m.status != "" {
-		st := m.theme.Fg("muted")
-		if m.statusErr {
-			st = m.theme.Fg("danger")
+// renderStatus is the vim/tmux-like bottom bar: mode badge, key hints (or a message), position on the right.
+func (m Model) renderStatus(rs []row) string {
+	t := m.theme
+	mode := "TABLE"
+	if m.bp == layout.XS {
+		mode = "TBL"
+	}
+	left := t.Badge("accent").Render(" " + mode + " ")
+	if m.edit != nil {
+		left += t.Badge("muted").Render(" EDIT · " + m.editTitle() + " ")
+	}
+
+	items, at := 0, 0
+	for i, r := range rs {
+		if r.item != nil {
+			items++
+			if i <= m.cursor {
+				at = items
+			}
 		}
-		return ansi.Truncate(st.Render(" "+m.status), m.width, "…")
 	}
-	var parts []string
-	for _, b := range m.keys.help() {
-		parts = append(parts, b.Help().Key+" "+b.Help().Desc)
+	pos := fmt.Sprintf("%d/%d", at, items)
+	if len(rs) > 0 && rs[m.cursor].item == nil {
+		pos = fmt.Sprintf("–/%d", items)
 	}
-	parts = append(parts, m.bp.String())
-	return ansi.Truncate(m.theme.Fg("muted").Render(" "+strings.Join(parts, " · ")), m.width, "…")
+	right := pos + " "
+	if m.bp > layout.SM {
+		cols, _ := m.visibleCols(rs)
+		right = fmt.Sprintf("row %s · col %d/%d ", pos, m.col+1, len(cols))
+	}
+	right = t.Fg("muted").Render(right)
+
+	var hints string
+	switch {
+	case m.status != "":
+		st := t.Fg("muted")
+		if m.statusErr {
+			st = t.Fg("danger")
+		}
+		hints = st.Render(m.status)
+	case m.edit != nil:
+		hints = hint(t, "enter", "save") + "  " + hint(t, "esc", "cancel")
+	default:
+		k := m.keys
+		pairs := [][2]string{
+			{k.Down.Help().Key + "/" + k.Up.Help().Key, "move"},
+			{k.Left.Help().Key + "/" + k.Right.Help().Key, "column"},
+			{k.Edit.Help().Key, "edit"},
+			{k.Toggle.Help().Key, "fold"},
+			{k.NextView.Help().Key, "view"},
+			{k.Switch.Help().Key, "projects"},
+			{k.Quit.Help().Key, "quit"},
+		}
+		room := m.width - ansi.StringWidth(left) - ansi.StringWidth(right) - 3
+		for _, p := range pairs { // whole hints only, as many as fit
+			h := hint(t, p[0], p[1])
+			if hints != "" {
+				h = "  " + h
+			}
+			if ansi.StringWidth(hints+h) > room {
+				break
+			}
+			hints += h
+		}
+	}
+	room := m.width - ansi.StringWidth(left) - ansi.StringWidth(right) - 3
+	return m.spread(left+"  "+ansi.Truncate(hints, max(0, room), "…"), right)
+}
+
+func hint(t theme.Theme, key, desc string) string {
+	return lipgloss.NewStyle().Bold(true).Render(key) + " " + t.Fg("muted").Render(desc)
+}
+
+func (m Model) editTitle() string {
+	if m.edit.kind == chooseField {
+		return "field"
+	}
+	return m.edit.field.Name
 }

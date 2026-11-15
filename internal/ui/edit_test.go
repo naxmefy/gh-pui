@@ -47,7 +47,7 @@ func TestEditStatusThroughFieldChooser(t *testing.T) {
 		t.Fatalf("calls %+v", *calls)
 	}
 	s := screen(m)
-	if !strings.Contains(s, "In Progress  1 · Estimate 5") || !strings.Contains(s, "Todo  1 · Estimate 1") {
+	if !strings.Contains(s, "In Progress  1 item · Σ Estimate 5") || !strings.Contains(s, "Todo  1 item · Σ Estimate 1") {
 		t.Errorf("B not regrouped:\n%s", s)
 	}
 	if strings.Contains(s, "saving") {
@@ -61,7 +61,7 @@ func TestEditNumberInColumnUpdatesSums(t *testing.T) {
 	if len(*calls) != 1 || *(*calls)[0].v.Number != 8 {
 		t.Fatalf("calls %+v", *calls)
 	}
-	if s := screen(m); !strings.Contains(s, "Todo  2 · Estimate 9") {
+	if s := screen(m); !strings.Contains(s, "Todo  2 items · Σ Estimate 9") {
 		t.Errorf("sum not updated:\n%s", s)
 	}
 }
@@ -73,7 +73,7 @@ func TestEditRejectsBadNumberAndCancels(t *testing.T) {
 		t.Fatalf("validation error missing:\n%s", s)
 	}
 	m = drive(m, "esc")
-	if s := screen(m); strings.Contains(s, "enter save") || len(*calls) != 0 || !strings.Contains(s, "Todo  2 · Estimate 6") {
+	if s := screen(m); strings.Contains(s, "enter save") || len(*calls) != 0 || !strings.Contains(s, "Todo  2 items · Σ Estimate 6") {
 		t.Errorf("esc should close without saving:\n%s", s)
 	}
 }
@@ -82,7 +82,7 @@ func TestSaveErrorRollsBack(t *testing.T) {
 	m, _ := newEditModel(t, errors.New("forbidden"))
 	m = drive(m, "j", "l", "e", "backspace", "9", "enter")
 	s := screen(m)
-	if !strings.Contains(s, "Estimate not saved: forbidden") || !strings.Contains(s, "Todo  2 · Estimate 6") {
+	if !strings.Contains(s, "Estimate not saved: forbidden") || !strings.Contains(s, "Todo  2 items · Σ Estimate 6") {
 		t.Errorf("no rollback:\n%s", s)
 	}
 }

@@ -105,7 +105,7 @@ func TestPickerOwnerToProjectToTable(t *testing.T) {
 	if len(*loaded) != 1 || (*loaded)[0] != (gh.ProjectRef{Owner: "acme", Number: 3, Title: "Bugs"}) {
 		t.Fatalf("loaded %v", *loaded)
 	}
-	if s := view(m); !strings.Contains(s, "acme/3 loaded") {
+	if s := view(m); !strings.Contains(s, "#3 loaded") {
 		t.Errorf("table not shown:\n%s", s)
 	}
 }
@@ -150,7 +150,7 @@ func TestAutoLoadSkipsPicker(t *testing.T) {
 		t.Fatalf("loading screen missing:\n%s", s)
 	}
 	m, _ = m.Update(m.Init()())
-	if s := view(m); !strings.Contains(s, "x/9 auto") {
+	if s := view(m); !strings.Contains(s, "#9 auto") {
 		t.Errorf("table not shown:\n%s", s)
 	}
 }
