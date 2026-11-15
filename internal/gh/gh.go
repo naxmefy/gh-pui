@@ -427,3 +427,18 @@ func (c *Client) loadViewItems(p *project.Project) error {
 	}
 	return nil
 }
+
+// Orgs lists the logins of the viewer's organizations (empty without the read:org scope).
+func (c *Client) Orgs() ([]string, error) {
+	var resp struct {
+		Viewer struct {
+			Organizations struct{ Nodes []struct{ Login string } }
+		}
+	}
+	err := c.gql.Do(`{ viewer { organizations(first:100) { nodes { login } } } }`, nil, &resp)
+	var out []string
+	for _, n := range resp.Viewer.Organizations.Nodes {
+		out = append(out, n.Login)
+	}
+	return out, err
+}
