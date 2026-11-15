@@ -6,6 +6,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
+	"github.com/sahilm/fuzzy"
 	"github.com/naxmefy/gh-pui/internal/gh"
 	"github.com/naxmefy/gh-pui/internal/ui/theme"
 )
@@ -53,27 +54,23 @@ type Page struct {
 	cursor, offset  int
 }
 
-func (p Page) visible() []Entry {
+func (p Page) visible() []Entry { return match(p.Entries, p.filter) }
+
+type entrySource []Entry
+
+func (s entrySource) String(i int) string { return s[i].text() }
+func (s entrySource) Len() int            { return len(s) }
+
+// match keeps the entries that fuzzy-match filter, best match first; an empty filter keeps all in order.
+func match(entries []Entry, filter string) []Entry {
+	if filter == "" {
+		return entries
+	}
 	var out []Entry
-	for _, e := range p.Entries {
-		if fuzzy(e.text(), p.filter) {
-			out = append(out, e)
-		}
+	for _, m := range fuzzy.FindFrom(filter, entrySource(entries)) {
+		out = append(out, entries[m.Index])
 	}
 	return out
-}
-
-// fuzzy reports whether the letters of pattern appear in s in order, ignoring case.
-func fuzzy(s, pattern string) bool {
-	s, pattern = strings.ToLower(s), strings.ToLower(pattern)
-	for _, r := range pattern {
-		i := strings.IndexRune(s, r)
-		if i < 0 {
-			return false
-		}
-		s = s[i+len(string(r)):]
-	}
-	return true
 }
 
 // ProjectLister fetches an owner's projects; gh.Client.OwnerProjects in production.
@@ -197,23 +194,7 @@ func (p Picker) View() tea.View {
 		" > " + pg.filter + "▌",
 		"",
 	}
-	vis := pg.visible()
-	end := min(len(vis), pg.offset+p.listHeight())
-	for i := pg.offset; i < end; i++ {
-		e, mark := vis[i], "  "
-		if i == pg.cursor {
-			mark = t.Fg("accent").Render("▌ ")
-		}
-		if e.Ref == nil {
-			lines = append(lines, " "+mark+e.Owner)
-			continue
-		}
-		lines = append(lines, " "+mark+t.Fg("accent").Bold(i == pg.cursor).Render(e.Ref.Title),
-			" "+mark+t.Fg("muted").Render(fmt.Sprintf("%s/#%d", e.Ref.Owner, e.Ref.Number)))
-	}
-	if len(vis) == 0 {
-		lines = append(lines, t.Fg("muted").Render("   nothing matches"))
-	}
+	lines = append(lines, renderEntries(t, pg.visible(), pg.cursor, pg.offset, p.listHeight())...)
 	for len(lines) < p.height-2 {
 		lines = append(lines, "")
 	}
@@ -231,4 +212,25 @@ func (p Picker) View() tea.View {
 	v := tea.NewView(strings.Join(lines, "\n"))
 	v.AltScreen = true
 	return v
+}
+
+// renderEntries draws n entries from offset: owners as one line, projects as two-line cards.
+func renderEntries(t theme.Theme, vis []Entry, cursor, offset, n int) []string {
+	var lines []string
+	for i := offset; i < min(len(vis), offset+n); i++ {
+		e, mark := vis[i], "  "
+		if i == cursor {
+			mark = t.Fg("accent").Render("▌ ")
+		}
+		if e.Ref == nil {
+			lines = append(lines, " "+mark+e.Owner)
+			continue
+		}
+		lines = append(lines, " "+mark+t.Fg("accent").Bold(i == cursor).Render(e.Ref.Title),
+			" "+mark+t.Fg("muted").Render(fmt.Sprintf("%s/#%d", e.Ref.Owner, e.Ref.Number)))
+	}
+	if len(vis) == 0 {
+		lines = append(lines, t.Fg("muted").Render("   nothing matches"))
+	}
+	return lines
 }

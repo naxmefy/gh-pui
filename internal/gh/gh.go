@@ -442,3 +442,23 @@ func (c *Client) Orgs() ([]string, error) {
 	}
 	return out, err
 }
+
+// ViewerProjects lists the viewer's own projects and those of the viewer's organizations in one query.
+// An org that refuses access (e.g. SAML) yields a GraphQL error; the projects that did load are still returned.
+func (c *Client) ViewerProjects() ([]ProjectRef, error) {
+	var resp struct {
+		Viewer struct {
+			ProjectsV2    struct{ Nodes []rawRef }
+			Organizations struct {
+				Nodes []struct{ ProjectsV2 struct{ Nodes []rawRef } }
+			}
+		}
+	}
+	err := c.gql.Do(`{ viewer { projectsV2(first:100){ `+refFields+` }
+  organizations(first:100){ nodes { projectsV2(first:100){ `+refFields+` } } } } }`, nil, &resp)
+	nodes := resp.Viewer.ProjectsV2.Nodes
+	for _, o := range resp.Viewer.Organizations.Nodes {
+		nodes = append(nodes, o.ProjectsV2.Nodes...)
+	}
+	return toRefs(nodes), err
+}

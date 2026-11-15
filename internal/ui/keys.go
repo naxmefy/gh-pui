@@ -16,6 +16,7 @@ type KeyMap struct {
 	Toggle   key.Binding
 	NextView key.Binding
 	PrevView key.Binding
+	Switch   key.Binding
 }
 
 func NewKeyMap(overrides map[string][]string) (KeyMap, error) {
@@ -28,10 +29,11 @@ func NewKeyMap(overrides map[string][]string) (KeyMap, error) {
 		Toggle:   key.NewBinding(key.WithKeys("enter", "space"), key.WithHelp("enter", "fold group")),
 		NextView: key.NewBinding(key.WithKeys("tab"), key.WithHelp("tab", "next view")),
 		PrevView: key.NewBinding(key.WithKeys("shift+tab"), key.WithHelp("shift+tab", "prev view")),
+		Switch:   key.NewBinding(key.WithKeys("ctrl+p"), key.WithHelp("ctrl+p", "projects")),
 	}
 	bindings := map[string]*key.Binding{
 		"quit": &km.Quit, "up": &km.Up, "down": &km.Down, "top": &km.Top, "bottom": &km.Bottom,
-		"toggle": &km.Toggle, "next_view": &km.NextView, "prev_view": &km.PrevView,
+		"toggle": &km.Toggle, "next_view": &km.NextView, "prev_view": &km.PrevView, "switch_project": &km.Switch,
 	}
 	for action, keys := range overrides {
 		b, ok := bindings[action]
@@ -48,5 +50,5 @@ func NewKeyMap(overrides map[string][]string) (KeyMap, error) {
 }
 
 func (k KeyMap) help() []key.Binding {
-	return []key.Binding{k.Down, k.Up, k.Toggle, k.NextView, k.Quit}
+	return []key.Binding{k.Down, k.Up, k.Toggle, k.NextView, k.Switch, k.Quit}
 }
