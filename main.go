@@ -7,9 +7,11 @@ import (
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/naxmefy/gh-pui/internal/config"
 	"github.com/naxmefy/gh-pui/internal/gh"
 	"github.com/naxmefy/gh-pui/internal/project"
 	"github.com/naxmefy/gh-pui/internal/ui"
+	"github.com/naxmefy/gh-pui/internal/ui/theme"
 )
 
 func main() {
@@ -22,7 +24,21 @@ func main() {
 func run() error {
 	owner := flag.String("owner", "", "project owner (user or org)")
 	number := flag.Int("project", 0, "project number")
+	themeFlag := flag.String("theme", "", "auto | ansi | none (default from config.yml)")
 	flag.Parse()
+
+	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
+	th, err := theme.New(cfg, *themeFlag)
+	if err != nil {
+		return err
+	}
+	keys, err := ui.NewKeyMap(cfg.Keys)
+	if err != nil {
+		return err
+	}
 
 	client, err := gh.New()
 	if err != nil {
@@ -50,7 +66,7 @@ func run() error {
 		fmt.Fprintln(os.Stderr, "gh pui: cache not written:", err)
 	}
 
-	_, err = tea.NewProgram(ui.NewModel(login, p)).Run()
+	_, err = tea.NewProgram(ui.NewModel(login, p, th, keys)).Run()
 	return err
 }
 
