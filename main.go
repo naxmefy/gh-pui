@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -81,7 +82,15 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	app := ui.NewApp(login, th, keys, ui.NewPicker(th, client.OwnerProjects, first), load, auto)
+	source := func() ([]gh.ProjectRef, []gh.ProjectRef, error) {
+		viewer, err := client.ViewerProjects()
+		if repo == "" {
+			return viewer, nil, err
+		}
+		inRepo, rerr := client.RepoProjects(repo)
+		return viewer, inRepo, errors.Join(err, rerr)
+	}
+	app := ui.NewApp(login, th, keys, ui.NewPicker(th, client.OwnerProjects, first), load, source, auto)
 	_, err = tea.NewProgram(app).Run()
 	mu.Lock()
 	defer mu.Unlock()

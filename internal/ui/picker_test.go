@@ -21,6 +21,10 @@ func keyMsg(k string) tea.KeyPressMsg {
 		return tea.KeyPressMsg{Code: tea.KeyEscape}
 	case "down":
 		return tea.KeyPressMsg{Code: tea.KeyDown}
+	case "tab":
+		return tea.KeyPressMsg{Code: tea.KeyTab}
+	case "ctrl+p":
+		return tea.KeyPressMsg{Code: 'p', Mod: tea.ModCtrl}
 	}
 	return tea.KeyPressMsg{Code: rune(k[0]), Text: k}
 }
@@ -61,19 +65,22 @@ func newTestApp(t *testing.T, loadErr error) (tea.Model, *[]gh.ProjectRef) {
 		return p, nil
 	}
 	first := Page{Title: "Choose an owner", Entries: OwnerEntries("me", "acme", "me")}
-	app := NewApp("me", th, keys, NewPicker(th, lister, first), load, nil)
+	app := NewApp("me", th, keys, NewPicker(th, lister, first), load, nil, nil)
 	m, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 	return m, &loaded
 }
 
-func TestFuzzy(t *testing.T) {
-	for _, c := range []struct {
-		s, p string
-		want bool
-	}{{"gh-pui naxmefy/18", "pui", true}, {"Roadmap", "rdmp", true}, {"Roadmap", "pam", false}, {"x", "", true}} {
-		if got := fuzzy(c.s, c.p); got != c.want {
-			t.Errorf("fuzzy(%q, %q) = %v", c.s, c.p, got)
-		}
+func TestMatchFiltersAndKeepsOrderWhenEmpty(t *testing.T) {
+	refs := []gh.ProjectRef{{Owner: "a", Number: 1, Title: "Roadmap"}, {Owner: "a", Number: 2, Title: "gh-pui"}, {Owner: "a", Number: 3, Title: "pull ui"}}
+	es := ProjectEntries(refs)
+	if got := match(es, ""); len(got) != 3 || got[0].Ref.Title != "Roadmap" {
+		t.Errorf("empty filter: %v", got)
+	}
+	if got := match(es, "pui"); len(got) != 2 {
+		t.Errorf("pui: want 2 matches, got %d", len(got))
+	}
+	if got := match(es, "rdmp"); len(got) != 1 || got[0].Ref.Title != "Roadmap" {
+		t.Errorf("rdmp: %v", got)
 	}
 }
 
@@ -134,7 +141,7 @@ func TestAutoLoadSkipsPicker(t *testing.T) {
 		p.Owner, p.Number, p.Title = ref.Owner, ref.Number, "auto"
 		return p, nil
 	}
-	var m tea.Model = NewApp("me", th, keys, NewPicker(th, nil, Page{}), load, &gh.ProjectRef{Owner: "x", Number: 9})
+	var m tea.Model = NewApp("me", th, keys, NewPicker(th, nil, Page{}), load, nil, &gh.ProjectRef{Owner: "x", Number: 9})
 	if s := view(m); !strings.Contains(s, "Loading x/9") {
 		t.Fatalf("loading screen missing:\n%s", s)
 	}
