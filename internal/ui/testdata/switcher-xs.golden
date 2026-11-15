@@ -1,0 +1,24 @@
+ acme/7 App roadmap  1  2  3
+   Title                                          
+ ▾ Todo  2 · Estimate 5                           
+ ○╭────────────────────────────────────────────╮15
+ ◌│ Switch project                             │
+ ▾│ All  This repo  Org  Me                    │
+ ○│ > ▌                                        │
+ ▾│                                            │
+ ◆│ ▌ App roadmap                              │
+ ●│ ▌ acme/#7                                  │
+ ▾│   Support queue                            │
+ ○│   acme/#2                                  │
+  │   Personal tasks                           │
+  │   mona/#1                                  │
+  │                                            │
+  │ tab scope · enter open · esc close         │
+  ╰────────────────────────────────────────────╯
+
+
+──────────────────────────────────────────────────
+
+
+
+ j down · k up · enter fold group · tab next view…
