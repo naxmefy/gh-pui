@@ -28,7 +28,7 @@ func TestSwitcherScopesAndSwitch(t *testing.T) {
 		return []gh.ProjectRef{{Owner: "me", Number: 1, Title: "Mine"}, {Owner: "acme", Number: 2, Title: "OrgProj"}},
 			[]gh.ProjectRef{{Owner: "acme", Number: 2, Title: "OrgProj"}, {Owner: "other", Number: 5, Title: "RepoProj"}}, nil
 	}
-	var m tea.Model = NewApp("me", th, keys, NewPicker(th, nil, Page{}), load, source, &gh.ProjectRef{Owner: "me", Number: 1})
+	var m tea.Model = NewApp("me", th, keys, NewPicker(th, nil, Page{}), load, source, nil, &gh.ProjectRef{Owner: "me", Number: 1})
 	m, _ = m.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
 	m, _ = m.Update(m.Init()())
 

@@ -90,7 +90,7 @@ func run() error {
 		inRepo, rerr := client.RepoProjects(repo)
 		return viewer, inRepo, errors.Join(err, rerr)
 	}
-	app := ui.NewApp(login, th, keys, ui.NewPicker(th, client.OwnerProjects, first), load, source, auto)
+	app := ui.NewApp(login, th, keys, ui.NewPicker(th, client.OwnerProjects, first), load, source, client.UpdateField, auto)
 	_, err = tea.NewProgram(app).Run()
 	mu.Lock()
 	defer mu.Unlock()

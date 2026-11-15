@@ -26,6 +26,7 @@ type App struct {
 	keys          KeyMap
 	load          ProjectLoader
 	source        ProjectSource
+	save          SaveFunc
 	picker        Picker
 	switcher      Switcher
 	switching     bool
@@ -37,8 +38,8 @@ type App struct {
 }
 
 // NewApp opens auto directly when it is set, else shows the picker.
-func NewApp(login string, th theme.Theme, keys KeyMap, picker Picker, load ProjectLoader, source ProjectSource, auto *gh.ProjectRef) App {
-	return App{login: login, theme: th, keys: keys, load: load, source: source, picker: picker, loading: auto,
+func NewApp(login string, th theme.Theme, keys KeyMap, picker Picker, load ProjectLoader, source ProjectSource, save SaveFunc, auto *gh.ProjectRef) App {
+	return App{login: login, theme: th, keys: keys, load: load, source: source, save: save, picker: picker, loading: auto,
 		switcher: Switcher{theme: th, login: login}, width: 80, height: 24}
 }
 
@@ -92,7 +93,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.switcher.err = err
 			return a, cmd
 		}
-		m, _ := NewModel(a.login, msg.p, a.theme, a.keys).Update(tea.WindowSizeMsg{Width: a.width, Height: a.height})
+		m, _ := NewModel(a.login, msg.p, a.theme, a.keys).WithSave(a.save).Update(tea.WindowSizeMsg{Width: a.width, Height: a.height})
 		t := m.(Model)
 		a.table = &t
 		return a, nil
@@ -115,7 +116,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.switcher, cmd, closed = a.switcher.Update(msg)
 			a.switching = !closed
 			return a, cmd
-		case a.table != nil && key.Matches(msg, a.keys.Switch):
+		case a.table != nil && !a.table.editing() && key.Matches(msg, a.keys.Switch):
 			return a.openSwitcher()
 		}
 	}

@@ -462,3 +462,43 @@ func (c *Client) ViewerProjects() ([]ProjectRef, error) {
 	}
 	return toRefs(nodes), err
 }
+
+// FieldValue is a new value for a project field: set one member, or none to clear the field.
+type FieldValue struct {
+	Text        *string
+	Number      *float64
+	Date        string // YYYY-MM-DD
+	OptionID    string
+	OptionIDs   []string
+	IterationID string
+}
+
+func (v FieldValue) input() map[string]interface{} {
+	switch {
+	case v.Text != nil:
+		return map[string]interface{}{"text": *v.Text}
+	case v.Number != nil:
+		return map[string]interface{}{"number": *v.Number}
+	case v.Date != "":
+		return map[string]interface{}{"date": v.Date}
+	case v.OptionID != "":
+		return map[string]interface{}{"singleSelectOptionId": v.OptionID}
+	case len(v.OptionIDs) > 0:
+		return map[string]interface{}{"multiSelectOptionIds": v.OptionIDs}
+	case v.IterationID != "":
+		return map[string]interface{}{"iterationId": v.IterationID}
+	}
+	return nil
+}
+
+// UpdateField sets (or clears, for an empty FieldValue) one field of a project item.
+func (c *Client) UpdateField(projectID, itemID, fieldID string, v FieldValue) error {
+	input := map[string]interface{}{"projectId": projectID, "itemId": itemID, "fieldId": fieldID}
+	q := `mutation($input:ClearProjectV2ItemFieldValueInput!){ clearProjectV2ItemFieldValue(input:$input){ clientMutationId } }`
+	if value := v.input(); value != nil {
+		input["value"] = value
+		q = `mutation($input:UpdateProjectV2ItemFieldValueInput!){ updateProjectV2ItemFieldValue(input:$input){ clientMutationId } }`
+	}
+	var resp struct{}
+	return c.gql.Do(q, map[string]interface{}{"input": input}, &resp)
+}

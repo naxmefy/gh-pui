@@ -91,7 +91,7 @@ func TestGoldenScreens(t *testing.T) {
 		m, _ := NewModel("mona", goldenProject(), th, keys).Update(size)
 		screens["table"] = drive(m, "down") // cursor on an item, so the peek is filled
 
-		var app tea.Model = NewApp("mona", th, keys, NewPicker(th, lister, Page{Title: "Choose an owner", Subtitle: "Not in a GitHub repo", Entries: OwnerEntries("mona", "acme")}), load, source, nil)
+		var app tea.Model = NewApp("mona", th, keys, NewPicker(th, lister, Page{Title: "Choose an owner", Subtitle: "Not in a GitHub repo", Entries: OwnerEntries("mona", "acme")}), load, source, nil, nil)
 		app, _ = app.Update(size)
 		screens["picker-owners"] = app
 		screens["picker-projects"] = drive(app, "down", "enter")

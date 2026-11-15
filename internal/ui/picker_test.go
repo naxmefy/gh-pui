@@ -23,6 +23,10 @@ func keyMsg(k string) tea.KeyPressMsg {
 		return tea.KeyPressMsg{Code: tea.KeyDown}
 	case "tab":
 		return tea.KeyPressMsg{Code: tea.KeyTab}
+	case "backspace":
+		return tea.KeyPressMsg{Code: tea.KeyBackspace}
+	case "space":
+		return tea.KeyPressMsg{Code: tea.KeySpace, Text: " "}
 	case "ctrl+p":
 		return tea.KeyPressMsg{Code: 'p', Mod: tea.ModCtrl}
 	}
@@ -65,7 +69,7 @@ func newTestApp(t *testing.T, loadErr error) (tea.Model, *[]gh.ProjectRef) {
 		return p, nil
 	}
 	first := Page{Title: "Choose an owner", Entries: OwnerEntries("me", "acme", "me")}
-	app := NewApp("me", th, keys, NewPicker(th, lister, first), load, nil, nil)
+	app := NewApp("me", th, keys, NewPicker(th, lister, first), load, nil, nil, nil)
 	m, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 	return m, &loaded
 }
@@ -141,7 +145,7 @@ func TestAutoLoadSkipsPicker(t *testing.T) {
 		p.Owner, p.Number, p.Title = ref.Owner, ref.Number, "auto"
 		return p, nil
 	}
-	var m tea.Model = NewApp("me", th, keys, NewPicker(th, nil, Page{}), load, nil, &gh.ProjectRef{Owner: "x", Number: 9})
+	var m tea.Model = NewApp("me", th, keys, NewPicker(th, nil, Page{}), load, nil, nil, &gh.ProjectRef{Owner: "x", Number: 9})
 	if s := view(m); !strings.Contains(s, "Loading x/9") {
 		t.Fatalf("loading screen missing:\n%s", s)
 	}
