@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/naxmefy/gh-pui/internal/config"
@@ -52,46 +53,85 @@ func run() error {
 		return err
 	}
 
-	if *owner == "" || *number == 0 {
-		if *owner, *number, err = projectFromRepo(client); err != nil {
-			return err
+	repo := gh.CurrentRepo()
+	var warns []string
+	var mu sync.Mutex
+	warn := func(format string, a ...any) {
+		mu.Lock()
+		defer mu.Unlock()
+		warns = append(warns, fmt.Sprintf(format, a...))
+	}
+	load := func(ref gh.ProjectRef, picked bool) (*project.Project, error) {
+		p, err := client.LoadProject(ref.Owner, ref.Number)
+		if err != nil {
+			return nil, err
 		}
+		if err := project.Save(p); err != nil {
+			warn("cache not written: %v", err)
+		}
+		if picked && repo != "" {
+			if err := config.SaveChoice(repo, config.Choice{Owner: ref.Owner, Number: ref.Number}); err != nil {
+				warn("choice not remembered: %v", err)
+			}
+		}
+		return p, nil
 	}
 
-	p, err := client.LoadProject(*owner, *number)
+	first, auto, err := startPage(client, login, repo, *owner, *number)
 	if err != nil {
 		return err
 	}
-	if err := project.Save(p); err != nil {
-		fmt.Fprintln(os.Stderr, "gh pui: cache not written:", err)
+	app := ui.NewApp(login, th, keys, ui.NewPicker(th, client.OwnerProjects, first), load, auto)
+	_, err = tea.NewProgram(app).Run()
+	mu.Lock()
+	defer mu.Unlock()
+	for _, w := range warns {
+		fmt.Fprintln(os.Stderr, "gh pui:", w)
 	}
-
-	_, err = tea.NewProgram(ui.NewModel(login, p, th, keys)).Run()
 	return err
 }
 
-// shortcut: picks the repo's single linked project; replace with the project picker (phase 1a startup logic).
-func projectFromRepo(client *gh.Client) (string, int, error) {
-	repo := gh.CurrentRepo()
-	if repo == "" {
-		return "", 0, fmt.Errorf("not in a GitHub repo, pass --owner and --project")
+// startPage decides the first screen: a project to open right away (auto), or the picker page to start on.
+func startPage(client *gh.Client, login, repo, owner string, number int) (ui.Page, *gh.ProjectRef, error) {
+	switch {
+	case owner != "" && number != 0:
+		return ui.Page{Title: "Choose a project"}, &gh.ProjectRef{Owner: owner, Number: number}, nil
+	case owner != "":
+		refs, err := client.OwnerProjects(owner)
+		entries := ui.ProjectEntries(refs)
+		return ui.Page{Title: "Projects of " + owner, Subtitle: fmt.Sprintf("%d open projects", len(entries)), Entries: entries}, nil, err
+	case repo == "":
+		return ui.Page{Title: "Choose an owner", Subtitle: "Not in a GitHub repo", Entries: ui.OwnerEntries(append([]string{login}, orgs(client)...)...)}, nil, nil
 	}
+
 	refs, err := client.RepoProjects(repo)
 	if err != nil {
-		return "", 0, err
+		return ui.Page{}, nil, err
 	}
-	var open []gh.ProjectRef
-	for _, r := range refs {
-		if !r.Closed {
-			open = append(open, r)
+	entries := ui.ProjectEntries(refs)
+	choices, err := config.LoadChoices()
+	if err != nil {
+		return ui.Page{}, nil, err
+	}
+	for _, e := range entries { // a remembered project counts only while it is still linked and open
+		if c := choices[repo]; c.Owner == e.Ref.Owner && c.Number == e.Ref.Number {
+			return ui.Page{Title: repo, Entries: entries}, e.Ref, nil
 		}
 	}
-	if len(open) == 1 {
-		return open[0].Owner, open[0].Number, nil
+	switch len(entries) {
+	case 0:
+		// shortcut: linking the repo and creating a project are planned for v0.6; browsing owners covers the rest.
+		repoOwner, _, _ := strings.Cut(repo, "/")
+		owners := ui.OwnerEntries(append([]string{repoOwner, login}, orgs(client)...)...)
+		return ui.Page{Title: "Choose an owner", Subtitle: repo + " has no linked project", Entries: owners}, nil, nil
+	case 1:
+		return ui.Page{Title: repo, Entries: entries}, entries[0].Ref, nil
 	}
-	var list []string
-	for _, r := range open {
-		list = append(list, fmt.Sprintf("  --owner %s --project %d  (%s)", r.Owner, r.Number, r.Title))
-	}
-	return "", 0, fmt.Errorf("%s has %d linked projects, pass one of:\n%s", repo, len(open), strings.Join(list, "\n"))
+	return ui.Page{Title: repo, Subtitle: fmt.Sprintf("%d linked projects · your choice is remembered", len(entries)), Entries: entries}, nil, nil
+}
+
+// orgs is best effort: without read:org the picker just offers fewer owners.
+func orgs(client *gh.Client) []string {
+	o, _ := client.Orgs()
+	return o
 }

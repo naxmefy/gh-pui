@@ -49,3 +49,20 @@ func TestLoadRejectsUnknownValues(t *testing.T) {
 		t.Errorf("got %v", err)
 	}
 }
+
+func TestChoicesRoundTrip(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	if c, err := LoadChoices(); err != nil || len(c) != 0 {
+		t.Fatalf("missing file: %v %v", c, err)
+	}
+	if err := SaveChoice("a/b", Choice{"a", 3}); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveChoice("c/d", Choice{"org", 7}); err != nil {
+		t.Fatal(err)
+	}
+	c, err := LoadChoices()
+	if err != nil || c["a/b"] != (Choice{"a", 3}) || c["c/d"] != (Choice{"org", 7}) {
+		t.Errorf("got %v %v", c, err)
+	}
+}
