@@ -1,0 +1,24 @@
+ acme/7 App roadmap  1  2  3
+   Title                                                               Assignees
+ ▾ Todo  2 · Estimate 5                                                         
+ ○ Crash╭──────────────────────────────────────────────────────────────╮ubot
+ ◌ Sketc│ Switch project                                               │
+ ▾ In Pr│ All  This repo  Org  Me                                      │
+ ○ Login│ > ▌                                                          │ona
+ ▾ Done │                                                              │
+ ◆ Add p│ ▌ App roadmap                                                │ona
+ ● Docum│ ▌ acme/#7                                                    │
+ ▾ No St│   Support queue                                              │
+ ○ Setti│   acme/#2                                                    │
+        │   Personal tasks                                             │
+        │   mona/#1                                                    │
+        │                                                              │
+        │ tab scope · enter open · esc close                           │
+        ╰──────────────────────────────────────────────────────────────╯
+
+
+────────────────────────────────────────────────────────────────────────────────
+
+
+
+ j down · k up · enter fold group · tab next view · ctrl+p projects · q quit · …

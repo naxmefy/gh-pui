@@ -1,0 +1,24 @@
+ acme/7 App roadmap  Backlog by status  Board  Roadmap
+   Title                                                                              Assignees  Labels         Estimate
+ ▾ Todo  2 · Estimate 5                                                                                                 
+ ○ Crash when the cache dire╭──────────────────────────────────────────────────────────────╮     bug            2
+ ◌ Sketch the onboarding flo│ Switch project                                               │                    3
+ ▾ In Progress  1 · Estimate│ All  This repo  Org  Me                                      │
+ ○ Login with passkeys #12  │ > ▌                                                          │     auth, feature  5
+ ▾ Done  2 · Estimate 1     │                                                              │
+ ◆ Add passkey endpoints #18│ ▌ App roadmap                                                │
+ ● Document the release proc│ ▌ acme/#7                                                    │     docs           1
+ ▾ No Status  1             │   Support queue                                              │
+ ○ Settings page #21        │   acme/#2                                                    │
+                            │   Personal tasks                                             │
+                            │   mona/#1                                                    │
+                            │                                                              │
+                            │ tab scope · enter open · esc close                           │
+                            ╰──────────────────────────────────────────────────────────────╯
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+
+ j down · k up · enter fold group · tab next view · ctrl+p projects · q quit · md
