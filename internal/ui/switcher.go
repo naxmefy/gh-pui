@@ -132,6 +132,11 @@ func (s Switcher) Overlay(base string, width, height int) string {
 		status = t.Fg("danger").Render(" " + s.err.Error())
 	}
 	lines = append(lines, "", status)
+	return overlay(t, base, lines, w, width, height)
+}
+
+// overlay draws lines in a rounded box of width w, centered horizontally and in the upper third of base.
+func overlay(t theme.Theme, base string, lines []string, w, width, height int) string {
 	for i, l := range lines {
 		lines[i] = ansi.Truncate(l, w-2, "…")
 	}

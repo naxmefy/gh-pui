@@ -6,9 +6,9 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/sahilm/fuzzy"
 	"github.com/naxmefy/gh-pui/internal/gh"
 	"github.com/naxmefy/gh-pui/internal/ui/theme"
+	"github.com/sahilm/fuzzy"
 )
 
 // Entry is one line in the picker: a project, or an owner whose projects open on enter.

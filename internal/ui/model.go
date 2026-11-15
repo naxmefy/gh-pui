@@ -26,7 +26,20 @@ type Model struct {
 	cursor    int                     // index into the current rows
 	offset    int                     // first visible row
 	collapsed map[int]map[string]bool // view -> group key -> folded
+	col       int                     // focused column of the cursor row
+	edit      *editor                 // open edit popup
+	save      SaveFunc                // nil: read-only
+	status    string                  // one-shot message in place of the help line
+	statusErr bool
 }
+
+// WithSave enables editing; without it the table is read-only.
+func (m Model) WithSave(save SaveFunc) Model {
+	m.save = save
+	return m
+}
+
+func (m Model) editing() bool { return m.edit != nil }
 
 func NewModel(login string, p *project.Project, th theme.Theme, keys KeyMap) Model {
 	return Model{login: login, project: p, theme: th, keys: keys, width: 80, height: 24, bp: layout.For(80),
@@ -55,7 +68,17 @@ func (m Model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := message.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height, m.bp = msg.Width, msg.Height, layout.For(msg.Width)
+	case savedMsg:
+		m.status, m.statusErr = "", false
+		if msg.err != nil {
+			msg.item.Values[msg.field] = msg.old
+			m.status, m.statusErr = fmt.Sprintf("%s not saved: %v", msg.field, msg.err), true
+		}
 	case tea.KeyPressMsg:
+		if m.edit != nil {
+			return m.updateEdit(msg)
+		}
+		m.status, m.statusErr = "", false
 		_, rs, grouped := m.table()
 		switch {
 		case key.Matches(msg, m.keys.Quit):
@@ -68,6 +91,12 @@ func (m Model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			m.cursor = 0
 		case key.Matches(msg, m.keys.Bottom):
 			m.cursor = len(rs) - 1
+		case key.Matches(msg, m.keys.Left):
+			m.col--
+		case key.Matches(msg, m.keys.Right):
+			m.col++
+		case key.Matches(msg, m.keys.Edit) && len(rs) > 0:
+			m.startEdit(rs)
 		case key.Matches(msg, m.keys.Toggle) && grouped && len(rs) > 0:
 			m.toggle(rs)
 		case key.Matches(msg, m.keys.NextView):
@@ -82,6 +111,60 @@ func (m Model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	}
 	m.clamp()
 	return m, nil
+}
+
+// startEdit opens the editor for the focused cell; on the title column it asks which field to edit,
+// which also reaches fields that are hidden or used for grouping (like Status).
+func (m *Model) startEdit(rs []row) {
+	it := rs[m.cursor].item
+	switch {
+	case m.save == nil:
+		m.status = "read-only"
+	case it == nil:
+		m.status = "move to an item to edit it"
+	case it.Type == "REDACTED":
+		m.status = "this item is not accessible"
+	case m.col == 0:
+		m.edit = newChooser(m.project, it)
+	default:
+		cols, _ := m.visibleCols(rs)
+		name := cols[m.col]
+		for _, f := range m.project.Fields {
+			if f.Name == name && editable(f) {
+				m.edit = newEditor(it, f)
+				return
+			}
+		}
+		m.status = name + " cannot be edited here"
+	}
+}
+
+// updateEdit routes keys to the open editor and saves optimistically: the table shows the new value at once,
+// savedMsg rolls it back if GitHub refuses.
+func (m Model) updateEdit(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	e := m.edit
+	cmd, done, apply := e.update(msg)
+	if !done {
+		return m, cmd
+	}
+	if !apply {
+		m.edit = nil
+		return m, nil
+	}
+	v, val, err := e.result()
+	if err != nil {
+		e.err = err.Error()
+		return m, nil
+	}
+	m.edit = nil
+	old := e.item.Values[e.field.Name]
+	e.item.Values[e.field.Name] = val
+	m.status = "saving " + e.field.Name + "…"
+	save, pid, item, field := m.save, m.project.ID, e.item, e.field
+	m.clamp()
+	return m, func() tea.Msg {
+		return savedMsg{item: item, field: field.Name, old: old, err: save(pid, item.ID, field.ID, v)}
+	}
 }
 
 // toggle folds or unfolds the group of the current row and keeps the cursor on its header.
@@ -113,6 +196,8 @@ func (m *Model) selectView(i int) {
 func (m *Model) clamp() {
 	_, rs, _ := m.table()
 	m.cursor = max(0, min(m.cursor, len(rs)-1))
+	cols, _ := m.visibleCols(rs)
+	m.col = max(0, min(m.col, len(cols)-1))
 	visible := m.bodyHeight()
 	if m.cursor < m.offset {
 		m.offset = m.cursor
@@ -138,9 +223,7 @@ func (m Model) bodyHeight() int {
 
 func (m Model) View() tea.View {
 	groups, rs, _ := m.table()
-	cols := columns(m.currentView(), m.bp)
-	widths := m.columnWidths(cols, rs)
-	cols = cols[:len(widths)]
+	cols, widths := m.visibleCols(rs)
 
 	lines := []string{m.renderTabs(), m.renderHeader(cols, widths)}
 	end := min(len(rs), m.offset+m.bodyHeight())
@@ -158,7 +241,11 @@ func (m Model) View() tea.View {
 	}
 	lines = append(lines, m.renderHelp())
 
-	out := tea.NewView(strings.Join(lines, "\n"))
+	content := strings.Join(lines, "\n")
+	if m.edit != nil {
+		content = overlay(m.theme, content, m.edit.lines(m.theme), max(20, min(m.width-4, 50)), m.width, m.height)
+	}
+	out := tea.NewView(content)
 	out.AltScreen = true
 	return out
 }
@@ -188,6 +275,13 @@ func cellText(it *project.Item, col string) string {
 		return it.Title
 	}
 	return it.Values[col].Text
+}
+
+// visibleCols are the view's columns that fit the width, with their widths.
+func (m Model) visibleCols(rs []row) ([]string, []int) {
+	cols := columns(m.currentView(), m.bp)
+	widths := m.columnWidths(cols, rs)
+	return cols[:len(widths)], widths
 }
 
 // columnWidths gives every non-title column its content width (max 24) and the rest to Title,
@@ -259,6 +353,23 @@ func (m Model) renderRow(r row, groups []group, cols []string, widths []int, sel
 			meta = append(meta, s.Field+" "+strconv.FormatFloat(s.Value, 'f', -1, 64))
 		}
 		line = " " + fold + " " + t.Fg("accent").Bold(true).Render(g.Label) + "  " + t.Fg("muted").Render(strings.Join(meta, " · "))
+	} else if selected {
+		// inverted row, the focused cell un-inverted and underlined; works on every color profile, including none
+		rev, focus := lipgloss.NewStyle().Reverse(true), lipgloss.NewStyle().Bold(true).Underline(true)
+		var b strings.Builder
+		b.WriteString(rev.Render(" " + ansi.Strip(m.symbol(r.item)) + " "))
+		for i, c := range cols {
+			if i > 0 {
+				b.WriteString(rev.Render("  "))
+			}
+			st := rev
+			if i == m.col {
+				st = focus
+			}
+			b.WriteString(st.Render(pad(cellText(r.item, c), widths[i])))
+		}
+		b.WriteString(rev.Render(strings.Repeat(" ", max(0, m.width-ansi.StringWidth(b.String())))))
+		return ansi.Truncate(b.String(), m.width, "")
 	} else {
 		cells := []string{" " + m.symbol(r.item) + " " + pad(cellText(r.item, cols[0]), widths[0])}
 		for i, c := range cols[1:] {
@@ -297,6 +408,13 @@ func (m Model) renderPeek(rs []row) []string {
 }
 
 func (m Model) renderHelp() string {
+	if m.status != "" {
+		st := m.theme.Fg("muted")
+		if m.statusErr {
+			st = m.theme.Fg("danger")
+		}
+		return ansi.Truncate(st.Render(" "+m.status), m.width, "…")
+	}
 	var parts []string
 	for _, b := range m.keys.help() {
 		parts = append(parts, b.Help().Key+" "+b.Help().Desc)

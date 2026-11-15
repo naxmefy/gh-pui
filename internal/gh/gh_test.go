@@ -2,6 +2,7 @@ package gh
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 )
 
@@ -95,6 +96,27 @@ func TestHasProjectScope(t *testing.T) {
 	} {
 		if got := hasProjectScope(header); got != want {
 			t.Errorf("%q: got %v", header, got)
+		}
+	}
+}
+
+func TestFieldValueInput(t *testing.T) {
+	text, num := "hi", 2.5
+	for _, c := range []struct {
+		v    FieldValue
+		want string
+	}{
+		{FieldValue{}, "map[]"},
+		{FieldValue{Text: &text}, "map[text:hi]"},
+		{FieldValue{Number: &num}, "map[number:2.5]"},
+		{FieldValue{Date: "2026-11-15"}, "map[date:2026-11-15]"},
+		{FieldValue{OptionID: "o1"}, "map[singleSelectOptionId:o1]"},
+		{FieldValue{OptionIDs: []string{"a", "b"}}, "map[multiSelectOptionIds:[a b]]"},
+		{FieldValue{OptionIDs: []string{}}, "map[]"},
+		{FieldValue{IterationID: "i1"}, "map[iterationId:i1]"},
+	} {
+		if got := fmt.Sprint(c.v.input()); got != c.want {
+			t.Errorf("%+v: got %s, want %s", c.v, got, c.want)
 		}
 	}
 }
