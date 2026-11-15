@@ -23,7 +23,8 @@ const fixture = `{
   ] },
   "items": { "pageInfo": { "hasNextPage": false, "endCursor": "c" }, "nodes": [
     { "id": "I1", "type": "ISSUE", "isArchived": false,
-      "content": { "__typename": "Issue", "title": "Fix it", "number": 7, "state": "OPEN", "url": "u", "repository": { "nameWithOwner": "x/y" } },
+      "content": { "__typename": "Issue", "title": "Fix it", "number": 7, "state": "OPEN", "url": "u", "repository": { "nameWithOwner": "x/y" },
+        "parent": { "number": 4, "title": "Epic" }, "subIssuesSummary": { "completed": 1, "total": 3 } },
       "fieldValues": { "nodes": [
         { "__typename": "ProjectV2ItemFieldNumberValue", "number": 3.5, "field": { "name": "Estimate" } },
         { "__typename": "ProjectV2ItemFieldSingleSelectValue", "name": "Todo", "field": { "name": "Status" } },
@@ -67,7 +68,8 @@ func TestToProject(t *testing.T) {
 		t.Errorf("item = %+v", it)
 	}
 	want := map[string]string{"Estimate": "3.5", "Status": "Todo", "Area": "ui, api", "Sprint": "Sprint 2",
-		"Assignees": "a, b", "Labels": "bug", "Repository": "x/y"}
+		"Assignees": "a, b", "Labels": "bug", "Repository": "x/y",
+		"Parent issue": "#4 Epic", "Sub-issues progress": "1/3"}
 	for k, w := range want {
 		if got := it.Values[k].Text; got != w {
 			t.Errorf("value %s = %q, want %q", k, got, w)

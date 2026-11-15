@@ -148,7 +148,8 @@ const projectQuery = `query($owner:String!,$number:Int!,$after:String,$meta:Bool
       id type isArchived
       content { __typename
         ... on DraftIssue { title }
-        ... on Issue { title number state url repository { nameWithOwner } }
+        ... on Issue { title number state url repository { nameWithOwner }
+          parent { number title } subIssuesSummary { completed total } }
         ... on PullRequest { title number state url repository { nameWithOwner } }
       }
       fieldValues(first:50) { nodes { __typename
@@ -224,6 +225,11 @@ type rawItem struct {
 		Title, State, URL string
 		Number            int
 		Repository        *struct{ NameWithOwner string }
+		Parent            *struct {
+			Number int
+			Title  string
+		}
+		SubIssuesSummary *struct{ Completed, Total int }
 	}
 	FieldValues struct {
 		Nodes []rawValue
@@ -266,7 +272,7 @@ func (c *Client) LoadProject(owner string, number int) (*project.Project, error)
 			p.Items = append(p.Items, toItems(raw.Items.Nodes)...)
 		}
 		if !raw.Items.PageInfo.HasNextPage {
-			return p, nil
+			return p, c.loadViewItems(p)
 		}
 		vars["after"] = raw.Items.PageInfo.EndCursor
 		vars["meta"] = false
@@ -320,6 +326,13 @@ func toItems(raw []rawItem) []project.Item {
 			it.Title, it.State, it.URL, it.Number = c.Title, c.State, c.URL, c.Number
 			if c.Repository != nil {
 				it.Repo = c.Repository.NameWithOwner
+			}
+			// parent and sub-issue progress are not delivered as field values, so fill those fields from the issue itself
+			if c.Parent != nil {
+				it.Values["Parent issue"] = project.Value{Text: fmt.Sprintf("#%d %s", c.Parent.Number, c.Parent.Title)}
+			}
+			if c.SubIssuesSummary != nil && c.SubIssuesSummary.Total > 0 {
+				it.Values["Sub-issues progress"] = project.Value{Text: fmt.Sprintf("%d/%d", c.SubIssuesSummary.Completed, c.SubIssuesSummary.Total)}
 			}
 		}
 		for _, v := range r.FieldValues.Nodes {
@@ -375,4 +388,42 @@ func toValue(v rawValue) project.Value {
 		return project.Value{Text: v.Repo.NameWithOwner}
 	}
 	return project.Value{}
+}
+
+// loadViewItems stores which items match each view's saved filter; the server evaluates the filter syntax.
+func (c *Client) loadViewItems(p *project.Project) error {
+	const q = `query($id:ID!,$query:String!,$after:String){ node(id:$id){ ... on ProjectV2 {
+  items(first:100, after:$after, query:$query) { pageInfo { hasNextPage endCursor } nodes { id } } } } }`
+	for i := range p.Views {
+		v := &p.Views[i]
+		if v.Filter == "" {
+			continue
+		}
+		v.ItemIDs = []string{}
+		vars := map[string]interface{}{"id": p.ID, "query": v.Filter, "after": (*string)(nil)}
+		for {
+			var resp struct {
+				Node struct {
+					Items struct {
+						PageInfo struct {
+							HasNextPage bool
+							EndCursor   string
+						}
+						Nodes []struct{ ID string }
+					}
+				}
+			}
+			if err := c.gql.Do(q, vars, &resp); err != nil {
+				return fmt.Errorf("view %q filter: %w", v.Name, err)
+			}
+			for _, n := range resp.Node.Items.Nodes {
+				v.ItemIDs = append(v.ItemIDs, n.ID)
+			}
+			if !resp.Node.Items.PageInfo.HasNextPage {
+				break
+			}
+			vars["after"] = resp.Node.Items.PageInfo.EndCursor
+		}
+	}
+	return nil
 }

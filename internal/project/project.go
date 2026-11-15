@@ -43,6 +43,7 @@ type View struct {
 	VerticalGroupBy []string
 	SortBy          []Sort
 	VisibleFields   []string
+	ItemIDs         []string // items matching Filter; nil when the view has no filter
 }
 
 type Sort struct {
