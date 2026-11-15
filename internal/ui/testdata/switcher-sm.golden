@@ -1,16 +1,16 @@
- acme/7 App roadmap  1  2  3
-   Title                                                               Assignees
- ▾ Todo  2 · Estimate 5                                                         
- ○ Crash╭──────────────────────────────────────────────────────────────╮ubot
- ◌ Sketc│ Switch project                                               │
- ▾ In Pr│ All  This repo  Org  Me                                      │
- ○ Login│ > ▌                                                          │ona
- ▾ Done │                                                              │
- ◆ Add p│ ▌ App roadmap                                                │ona
- ● Docum│ ▌ acme/#7                                                    │
- ▾ No St│   Support queue                                              │
- ○ Setti│   acme/#2                                                    │
-        │   Personal tasks                                             │
+ gh pui › #7 App roadmap                                                  @mona
+  1 ▤ Backlog by status   2▤  3▥  4▬
+   TITLE                                                               ASSIGNEES
+ ▾ ● Tod╭──────────────────────────────────────────────────────────────╮        
+ ○ app#1│ Switch project                                               │ubot
+ ◌ draft│ All  This repo  Org  Me                                      │
+ ▾ ● In │ > ▌                                                          │
+ ○ app#1│                                                              │ona
+ ▾ ● Don│ ▌ App roadmap                                                │
+ ◆ app#1│ ▌ acme/#7                                                    │ona
+ ● app#9│   Support queue                                              │
+ ▾ No St│   acme/#2                                                    │
+ ○ app#2│   Personal tasks                                             │
         │   mona/#1                                                    │
         │                                                              │
         │ tab scope · enter open · esc close                           │
@@ -21,4 +21,4 @@
 
 
 
- j down · k up · e edit · enter fold group · tab next view · ctrl+p projects · …
+ TABLE   j/k move  h/l column  e edit  enter fold  tab view                 –/6

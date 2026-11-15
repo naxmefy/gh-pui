@@ -1,24 +1,24 @@
- acme/7 App roadmap  1  2  3
-   Title                                          
- ▾ Todo  2 · Estimate 5                           
- ○╭────────────────────────────────────────────╮15
- ◌│ Switch project                             │
- ▾│ All  This repo  Org  Me                    │
- ○│ > ▌                                        │
- ▾│                                            │
- ◆│ ▌ App roadmap                              │
- ●│ ▌ acme/#7                                  │
- ▾│   Support queue                            │
- ○│   acme/#2                                  │
-  │   Personal tasks                           │
+ #7 App roadmap                             ▤ 1/4 
+ ▾ ● Todo  2 · Σ Estimate 5                       
+ ○ app#15                               hubot bug
+  ╭────────────────────────────────────────────╮
+ ◌│ Switch project                             │3
+  │ All  This repo  Org  Me                    │
+ ▾│ > ▌                                        │
+ ○│                                            │e
+  │ ▌ App roadmap                              │
+ ▾│ ▌ acme/#7                                  │
+ ◆│   Support queue                            │a
+  │   acme/#2                                  │
+ ●│   Personal tasks                           │1
   │   mona/#1                                  │
-  │                                            │
-  │ tab scope · enter open · esc close         │
+ ▾│                                            │
+ ○│ tab scope · enter open · esc close         │
   ╰────────────────────────────────────────────╯
 
 
-──────────────────────────────────────────────────
 
 
 
- j down · k up · e edit · enter fold group · tab …
+
+ TBL   j/k move  h/l column  e edit           –/6

@@ -25,16 +25,29 @@ var ansi = map[string]string{
 	"status.review":   "5",
 	"status.done":     "2",
 	"status.blocked":  "1",
+	// GitHub's option colors (single select, status), so dots match github.com
+	"option.gray":   "8",
+	"option.blue":   "4",
+	"option.green":  "2",
+	"option.yellow": "3",
+	"option.orange": "11",
+	"option.red":    "1",
+	"option.pink":   "13",
+	"option.purple": "5",
+	// background of the cursor row; empty means reverse video, the only choice that works on every palette
+	"selected": "",
 }
 
 var symbolSets = map[string]map[string]string{
 	"unicode": {
 		"issue": "○", "issue.closed": "●", "pr": "◇", "pr.merged": "◆", "draft": "◌",
-		"expanded": "▾", "collapsed": "▸",
+		"expanded": "▾", "collapsed": "▸", "dot": "●", "bar": "▌", "sep": "›", "empty": "—",
+		"layout.table": "▤", "layout.board": "▥", "layout.roadmap": "▬",
 	},
 	"ascii": {
 		"issue": "o", "issue.closed": "x", "pr": "p", "pr.merged": "m", "draft": "d",
-		"expanded": "v", "collapsed": ">",
+		"expanded": "v", "collapsed": ">", "dot": "*", "bar": "|", "sep": ">", "empty": "-",
+		"layout.table": "#", "layout.board": "|", "layout.roadmap": "=",
 	},
 }
 
@@ -69,6 +82,9 @@ func New(cfg config.Config, override string) (Theme, error) {
 	for role, value := range ansi {
 		if v, ok := cfg.Colors[role]; ok {
 			value = v
+		}
+		if value == "" {
+			continue
 		}
 		if mode == "none" {
 			t.colors[role] = lipgloss.NoColor{}
@@ -107,4 +123,18 @@ func (t Theme) Color(role string) color.Color {
 
 func (t Theme) Symbol(name string) string {
 	return t.symbols[name]
+}
+
+// Selected styles the cursor row: the configured "selected" background, else reverse video.
+func (t Theme) Selected() lipgloss.Style {
+	c, ok := t.colors["selected"]
+	if _, none := c.(lipgloss.NoColor); ok && !none {
+		return lipgloss.NewStyle().Background(c)
+	}
+	return lipgloss.NewStyle().Reverse(true)
+}
+
+// Badge is the filled label of the active tab and the statusbar mode: the role's color as background.
+func (t Theme) Badge(role string) lipgloss.Style {
+	return t.Fg(role).Bold(true).Reverse(true)
 }

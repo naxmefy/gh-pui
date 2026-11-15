@@ -70,7 +70,7 @@ func TestSwitcherScopesAndSwitch(t *testing.T) {
 	if len(loaded) != 2 || loaded[1].Number != 5 || !picks[1] {
 		t.Fatalf("loaded %v picks %v", loaded, picks)
 	}
-	if s := view(m); !strings.Contains(s, "other/5 loaded") || strings.Contains(s, "Switch project") {
+	if s := view(m); !strings.Contains(s, "#5 loaded") || strings.Contains(s, "Switch project") {
 		t.Errorf("table of the new project not shown:\n%s", s)
 	}
 	if fetches != 1 {

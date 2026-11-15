@@ -1,16 +1,16 @@
- acme/7 App roadmap  Backlog by status  Board  Roadmap
-   Title                                                                              Assignees  Labels         Estimate
- ▾ Todo  2 · Estimate 5                                                                                                 
- ○ Crash when the cache dire╭──────────────────────────────────────────────────────────────╮     bug            2
- ◌ Sketch the onboarding flo│ Switch project                                               │                    3
- ▾ In Progress  1 · Estimate│ All  This repo  Org  Me                                      │
- ○ Login with passkeys #12  │ > ▌                                                          │     auth, feature  5
- ▾ Done  2 · Estimate 1     │                                                              │
- ◆ Add passkey endpoints #18│ ▌ App roadmap                                                │
- ● Document the release proc│ ▌ acme/#7                                                    │     docs           1
- ▾ No Status  1             │   Support queue                                              │
- ○ Settings page #21        │   acme/#2                                                    │
-                            │   Personal tasks                                             │
+ gh pui › #7 App roadmap                                                                                          @mona
+  1 ▤ Backlog by status   2 ▤ All items  3 ▥ Board  4 ▬ Roadmap
+   TITLE                                                                              ASSIGNEES  LABELS         ESTIMATE
+ ▾ ● Todo  2 items · Σ Estim╭──────────────────────────────────────────────────────────────╮                            
+ ○ app#15 Crash when the cac│ Switch project                                               │     bug            2
+ ◌ draft Sketch the onboardi│ All  This repo  Org  Me                                      │     —              3
+ ▾ ● In Progress  1 item · Σ│ > ▌                                                          │
+ ○ app#12 Login with passkey│                                                              │     auth, feature  5
+ ▾ ● Done  2 items · Σ Estim│ ▌ App roadmap                                                │
+ ◆ app#18 Add passkey endpoi│ ▌ acme/#7                                                    │     —              —
+ ● app#9 Document the releas│   Support queue                                              │     docs           1
+ ▾ No Status  1 item        │   acme/#2                                                    │
+ ○ app#21 Settings page     │   Personal tasks                                             │     —              —
                             │   mona/#1                                                    │
                             │                                                              │
                             │ tab scope · enter open · esc close                           │
@@ -21,4 +21,4 @@
 
 
 
- j down · k up · e edit · enter fold group · tab next view · ctrl+p projects · q quit · md
+ TABLE   j/k move  h/l column  e edit  enter fold  tab view  ctrl+p projects  q quit                  row –/6 · col 1/4
