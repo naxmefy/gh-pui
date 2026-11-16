@@ -73,13 +73,13 @@ func TestRowsCollapse(t *testing.T) {
 	p := testProject()
 	v := project.View{GroupBy: []string{"Status"}}
 	groups := groupItems(p, v, viewItems(p, v), sumFields(p, nil))
-	if n := len(rows(groups, true, nil, false)); n != 3+4 {
+	if n := len(rows(groups, true, nil, false, nil)); n != 3+4 {
 		t.Errorf("expanded rows = %d, want 7", n)
 	}
-	if n := len(rows(groups, true, map[string]bool{"Todo": true}, false)); n != 3+2 {
+	if n := len(rows(groups, true, map[string]bool{"Todo": true}, false, nil)); n != 3+2 {
 		t.Errorf("rows with Todo collapsed = %d, want 5", n)
 	}
-	if n := len(rows(groups, false, nil, false)); n != 4 {
+	if n := len(rows(groups, false, nil, false, nil)); n != 4 {
 		t.Errorf("ungrouped rows = %d, want 4", n)
 	}
 }
@@ -125,5 +125,32 @@ func TestSumFieldsDefaultAndConfigured(t *testing.T) {
 	p.Fields = p.Fields[:1] // no number fields at all
 	if got := sumFields(p, nil); got != nil {
 		t.Errorf("without an estimation field: %v", got)
+	}
+}
+
+func TestRowsHideSubIssuesUntilExpanded(t *testing.T) {
+	parent := &project.Item{Title: "P", Repo: "r/x", Number: 1}
+	child := &project.Item{Title: "C", Repo: "r/x", Number: 2, Parent: "r/x#1"}
+	grand := &project.Item{Title: "G", Repo: "r/x", Number: 3, Parent: "r/x#2"}
+	other := &project.Item{Title: "O", Repo: "r/x", Number: 4}
+	groups := []group{{Items: []*project.Item{parent, child, grand, other}}}
+	names := func(rs []row) (out []string) {
+		for _, r := range rs {
+			out = append(out, r.item.Title)
+		}
+		return out
+	}
+	rs := rows(groups, false, nil, true, nil)
+	if got := names(rs); !reflect.DeepEqual(got, []string{"P", "O"}) || rs[0].children != 1 {
+		t.Errorf("collapsed: %v children=%d", got, rs[0].children)
+	}
+	if got := names(rows(groups, false, nil, true, map[string]bool{"r/x#1": true})); !reflect.DeepEqual(got, []string{"P", "C", "O"}) {
+		t.Errorf("parent expanded: %v", got)
+	}
+	if got := names(rows(groups, false, nil, true, map[string]bool{"r/x#1": true, "r/x#2": true})); !reflect.DeepEqual(got, []string{"P", "C", "G", "O"}) {
+		t.Errorf("all expanded: %v", got)
+	}
+	if n := topLevel(groups[0].Items); n != 2 {
+		t.Errorf("top level = %d, want 2", n)
 	}
 }

@@ -22,9 +22,10 @@ type sum struct {
 
 // row is one line of the table body: a group header (item == nil) or an item.
 type row struct {
-	group int
-	item  *project.Item
-	depth int // nesting below a parent issue (show hierarchy)
+	group    int
+	item     *project.Item
+	depth    int // nesting below a parent issue (show hierarchy)
+	children int // direct sub-issues among the group's items
 }
 
 // viewItems returns the items the view shows: not archived, matching the view's saved filter, sorted.
@@ -201,8 +202,9 @@ func nest(items []*project.Item) ([]*project.Item, []int) {
 	return out, depths
 }
 
-// rows flattens groups into table lines; an ungrouped view has no header lines.
-func rows(groups []group, grouped bool, collapsed map[string]bool, hierarchy bool) []row {
+// rows flattens groups into table lines; an ungrouped view has no header lines. With hierarchy, sub-issues
+// follow their parent and stay hidden until the parent is expanded (by Ref), like github.com.
+func rows(groups []group, grouped bool, collapsed map[string]bool, hierarchy bool, expanded map[string]bool) []row {
 	var out []row
 	for gi, g := range groups {
 		if grouped {
@@ -215,11 +217,41 @@ func rows(groups []group, grouped bool, collapsed map[string]bool, hierarchy boo
 		if hierarchy {
 			items, depths = nest(g.Items)
 		}
+		hideBelow := -1 // depth of a collapsed parent whose subtree is skipped
 		for i, it := range items {
-			out = append(out, row{group: gi, item: it, depth: depths[i]})
+			d := depths[i]
+			if hideBelow >= 0 && d > hideBelow {
+				continue
+			}
+			hideBelow = -1
+			children := 0
+			for j := i + 1; j < len(items) && depths[j] > d; j++ {
+				if depths[j] == d+1 {
+					children++
+				}
+			}
+			out = append(out, row{group: gi, item: it, depth: d, children: children})
+			if children > 0 && !expanded[it.Ref()] {
+				hideBelow = d
+			}
 		}
 	}
 	return out
+}
+
+// topLevel counts the items that are not sub-issues of another item in the list (github.com's group count).
+func topLevel(items []*project.Item) int {
+	present := map[string]bool{}
+	for _, it := range items {
+		present[it.Ref()] = true
+	}
+	n := 0
+	for _, it := range items {
+		if it.Parent == "" || !present[it.Parent] {
+			n++
+		}
+	}
+	return n
 }
 
 // columns picks the view's visible fields in their order, Title first, as many as the breakpoint allows.
