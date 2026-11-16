@@ -117,3 +117,32 @@ func TestSliceKeysNarrowTheTable(t *testing.T) {
 		t.Errorf("[ from All should wrap to the last value:\n%s", s)
 	}
 }
+
+func TestHierarchyFoldFromSubIssueAndTopLevelSums(t *testing.T) {
+	th, _ := theme.New(config.Default(), "none")
+	keys, _ := NewKeyMap(nil)
+	todo := project.Value{Text: "Todo"}
+	p := &project.Project{
+		Fields: []project.Field{{Name: "Status", DataType: "SINGLE_SELECT", Options: []project.Option{{Name: "Todo"}}}, {Name: "Estimate", DataType: "NUMBER"}},
+		Views:  []project.View{{Name: "v", GroupBy: []string{"Status"}, VisibleFields: []string{"Title"}}},
+		Items: []project.Item{
+			{ID: "p", Title: "Parent", Repo: "r/x", Number: 1, Values: map[string]project.Value{"Status": todo, "Estimate": {Text: "5", Number: num(5)}}},
+			{ID: "c", Title: "Child", Repo: "r/x", Number: 2, Parent: "r/x#1", Values: map[string]project.Value{"Status": todo, "Estimate": {Text: "3", Number: num(3)}}},
+		},
+	}
+	m, _ := NewModel("me", p, th, keys).Update(tea.WindowSizeMsg{Width: 100, Height: 30})
+	if s := screen(m); !strings.Contains(s, "Todo  1 item · Σ Estimate 5") || strings.Contains(s, "Child") {
+		t.Fatalf("sub-issue should be hidden and left out of count and sum:\n%s", s)
+	}
+	m = press(m, "j", "enter", "j") // expand the parent, move onto the child
+	if s := screen(m); !strings.Contains(s, "Child") {
+		t.Fatalf("parent not expanded:\n%s", s)
+	}
+	m = press(m, "enter") // on the child: collapse the parent, cursor jumps to it
+	if s := screen(m); strings.Contains(s, "Child") || !strings.Contains(s, "▾ Todo") {
+		t.Errorf("enter on a sub-issue should collapse its parent, not the group:\n%s", s)
+	}
+	if c := m.(Model).cursor; c != 1 {
+		t.Errorf("cursor = %d, want 1 (the parent)", c)
+	}
+}

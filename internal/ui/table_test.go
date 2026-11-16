@@ -150,7 +150,7 @@ func TestRowsHideSubIssuesUntilExpanded(t *testing.T) {
 	if got := names(rows(groups, false, nil, true, map[string]bool{"r/x#1": true, "r/x#2": true})); !reflect.DeepEqual(got, []string{"P", "C", "G", "O"}) {
 		t.Errorf("all expanded: %v", got)
 	}
-	if n := topLevel(groups[0].Items); n != 2 {
+	if n := len(topLevel(groups[0].Items)); n != 2 {
 		t.Errorf("top level = %d, want 2", n)
 	}
 }

@@ -91,7 +91,13 @@ func (m Model) table() (groups []group, rs []row, grouped bool) {
 	if field, values, sel := m.sliceState(); sel > 0 {
 		items = sliceItems(items, field, values[sel-1])
 	}
-	groups = groupItems(m.project, v, items, sumFields(m.project, m.settings.Sum))
+	fields := sumFields(m.project, m.settings.Sum)
+	groups = groupItems(m.project, v, items, fields)
+	if m.hierarchy() {
+		for i := range groups {
+			groups[i].Sums = sums(topLevel(groups[i].Items), fields)
+		}
+	}
 	return groups, rows(groups, grouped, m.collapsed[m.view], m.hierarchy(), m.expanded), grouped
 }
 
@@ -207,12 +213,22 @@ func (m Model) updateEdit(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 }
 
 // toggle folds or unfolds the group of the current row and keeps the cursor on its header.
-// On a parent issue it expands or collapses its sub-issues instead.
+// On a parent issue it expands or collapses its sub-issues instead; on a sub-issue it collapses
+// the parent and moves the cursor there.
 func (m *Model) toggle(rs []row, grouped bool) {
 	r := rs[m.cursor]
 	if r.item != nil && r.children > 0 {
 		m.expanded[r.item.Ref()] = !m.expanded[r.item.Ref()]
 		return
+	}
+	if r.item != nil && r.depth > 0 {
+		for i := m.cursor - 1; i >= 0; i-- {
+			if rs[i].item != nil && rs[i].depth == r.depth-1 {
+				m.expanded[rs[i].item.Ref()] = false
+				m.cursor = i
+				return
+			}
+		}
 	}
 	if !grouped {
 		return
@@ -609,7 +625,7 @@ func (m Model) renderRow(r row, groups []group, cols []string, widths []int, sel
 		}
 		count := len(g.Items)
 		if m.hierarchy() {
-			count = topLevel(g.Items)
+			count = len(topLevel(g.Items))
 		}
 		meta := []string{fmt.Sprintf("%d items", count)}
 		if count == 1 {
