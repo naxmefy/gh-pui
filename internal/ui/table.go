@@ -239,19 +239,20 @@ func rows(groups []group, grouped bool, collapsed map[string]bool, hierarchy boo
 	return out
 }
 
-// topLevel counts the items that are not sub-issues of another item in the list (github.com's group count).
-func topLevel(items []*project.Item) int {
+// topLevel keeps the items that are not sub-issues of another item in the list; with show hierarchy,
+// github.com counts only these, and sums follow the same rule so an estimate is not counted twice.
+func topLevel(items []*project.Item) []*project.Item {
 	present := map[string]bool{}
 	for _, it := range items {
 		present[it.Ref()] = true
 	}
-	n := 0
+	var out []*project.Item
 	for _, it := range items {
 		if it.Parent == "" || !present[it.Parent] {
-			n++
+			out = append(out, it)
 		}
 	}
-	return n
+	return out
 }
 
 // columns picks the view's visible fields in their order, Title first, as many as the breakpoint allows.
