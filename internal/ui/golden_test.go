@@ -94,6 +94,9 @@ func TestGoldenScreens(t *testing.T) {
 		m, _ := NewModel("mona", goldenProject(), th, keys).WithSettings(settings).Update(size)
 		screens["table"] = drive(m, "down") // cursor on an item, so the peek is filled
 		screens["table-ungrouped"] = drive(m, "tab", "down", "l")
+		// fresh model: fold state lives in maps shared by model copies
+		fresh, _ := NewModel("mona", goldenProject(), th, keys).WithSettings(settings).Update(size)
+		screens["table-expanded"] = drive(fresh, "tab", "enter", "down") // #12 expanded: #21 shows under it
 
 		var app tea.Model = NewApp("mona", th, keys, NewPicker(th, lister, Page{Title: "Choose an owner", Subtitle: "Not in a GitHub repo", Entries: OwnerEntries("mona", "acme")}), load, source, nil, nil)
 		app, _ = app.Update(size)

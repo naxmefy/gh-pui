@@ -34,6 +34,7 @@ type Model struct {
 	statusErr bool
 	settings  config.ProjectSettings // local view options from projects.yml
 	slice     map[int]int            // view -> selected slice value (0 = all)
+	expanded  map[string]bool        // item Ref -> sub-issues shown
 }
 
 // WithSettings applies projects.yml settings the API cannot provide (sums, hierarchy, slice).
@@ -69,7 +70,7 @@ func (m Model) editing() bool { return m.edit != nil }
 
 func NewModel(login string, p *project.Project, th theme.Theme, keys KeyMap) Model {
 	return Model{login: login, project: p, theme: th, keys: keys, width: 80, height: 24, bp: layout.For(80),
-		collapsed: map[int]map[string]bool{}, slice: map[int]int{}}
+		collapsed: map[int]map[string]bool{}, slice: map[int]int{}, expanded: map[string]bool{}}
 }
 
 func (m Model) Init() tea.Cmd {
@@ -91,7 +92,7 @@ func (m Model) table() (groups []group, rs []row, grouped bool) {
 		items = sliceItems(items, field, values[sel-1])
 	}
 	groups = groupItems(m.project, v, items, sumFields(m.project, m.settings.Sum))
-	return groups, rows(groups, grouped, m.collapsed[m.view], m.hierarchy()), grouped
+	return groups, rows(groups, grouped, m.collapsed[m.view], m.hierarchy(), m.expanded), grouped
 }
 
 func (m Model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
@@ -127,8 +128,8 @@ func (m Model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			m.col++
 		case key.Matches(msg, m.keys.Edit) && len(rs) > 0:
 			m.startEdit(rs)
-		case key.Matches(msg, m.keys.Toggle) && grouped && len(rs) > 0:
-			m.toggle(rs)
+		case key.Matches(msg, m.keys.Toggle) && len(rs) > 0:
+			m.toggle(rs, grouped)
 		case key.Matches(msg, m.keys.SliceNext, m.keys.SlicePrev):
 			if _, values, sel := m.sliceState(); values != nil {
 				step := 1
@@ -206,9 +207,17 @@ func (m Model) updateEdit(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 }
 
 // toggle folds or unfolds the group of the current row and keeps the cursor on its header.
-func (m *Model) toggle(rs []row) {
-	groups, _, _ := m.table()
+// On a parent issue it expands or collapses its sub-issues instead.
+func (m *Model) toggle(rs []row, grouped bool) {
 	r := rs[m.cursor]
+	if r.item != nil && r.children > 0 {
+		m.expanded[r.item.Ref()] = !m.expanded[r.item.Ref()]
+		return
+	}
+	if !grouped {
+		return
+	}
+	groups, _, _ := m.table()
 	k := groups[r.group].Key
 	if m.collapsed[m.view] == nil {
 		m.collapsed[m.view] = map[string]bool{}
@@ -404,12 +413,19 @@ func (m Model) renderTabs() string {
 	return ansi.Truncate(left, m.width, "…")
 }
 
-// indent marks sub-issues under their parent (show hierarchy).
-func (m Model) indent(depth int) (plain, styled string) {
-	if depth == 0 {
-		return "", ""
+// indent marks the hierarchy before a title: sub-issues get `└` under their parent,
+// parents a fold marker (▸ collapsed, ▾ expanded).
+func (m Model) indent(r row) (plain, styled string) {
+	if r.depth > 0 {
+		plain = strings.Repeat("  ", r.depth-1) + m.theme.Symbol("child") + " "
 	}
-	plain = strings.Repeat("  ", depth-1) + m.theme.Symbol("child") + " "
+	if r.children > 0 {
+		fold := m.theme.Symbol("collapsed")
+		if m.expanded[r.item.Ref()] {
+			fold = m.theme.Symbol("expanded")
+		}
+		plain += fold + " "
+	}
 	return plain, m.theme.Fg("muted").Render(plain)
 }
 
@@ -591,12 +607,16 @@ func (m Model) renderRow(r row, groups []group, cols []string, widths []int, sel
 				dot = t.Fg(role).Render(t.Symbol("dot")) + " "
 			}
 		}
-		meta := []string{fmt.Sprintf("%d items", len(g.Items))}
-		if len(g.Items) == 1 {
+		count := len(g.Items)
+		if m.hierarchy() {
+			count = topLevel(g.Items)
+		}
+		meta := []string{fmt.Sprintf("%d items", count)}
+		if count == 1 {
 			meta[0] = "1 item"
 		}
 		if m.bp == layout.XS {
-			meta = []string{strconv.Itoa(len(g.Items))}
+			meta = []string{strconv.Itoa(count)}
 		}
 		for _, s := range g.Sums {
 			meta = append(meta, "Σ "+s.Field+" "+strconv.FormatFloat(s.Value, 'f', -1, 64))
@@ -614,7 +634,7 @@ func (m Model) renderRow(r row, groups []group, cols []string, widths []int, sel
 		lead = t.Fg("accent").Render(t.Symbol("bar"))
 	}
 	if m.bp == layout.XS {
-		return m.renderCard(it, lead, selected)
+		return m.renderCard(r, lead, selected)
 	}
 	if selected {
 		// the cursor row is inverted (or the "selected" background); a focused field cell stands out un-inverted and underlined
@@ -631,7 +651,7 @@ func (m Model) renderRow(r row, groups []group, cols []string, widths []int, sel
 			}
 			plain, _ := m.cell(it, c)
 			if i == 0 {
-				in, _ := m.indent(r.depth)
+				in, _ := m.indent(r)
 				plain = in + plain
 			}
 			b.WriteString(st.Render(pad(plain, widths[i])))
@@ -643,7 +663,7 @@ func (m Model) renderRow(r row, groups []group, cols []string, widths []int, sel
 	for i, c := range cols {
 		_, styled := m.cell(it, c)
 		if i == 0 {
-			_, in := m.indent(r.depth)
+			_, in := m.indent(r)
 			styled = in + styled
 		}
 		cells[i] = pad(styled, widths[i])
@@ -652,15 +672,16 @@ func (m Model) renderRow(r row, groups []group, cols []string, widths []int, sel
 }
 
 // renderCard is the xs form of an item: `symbol repo#num` with a few field values on the right, then the title.
-func (m Model) renderCard(it *project.Item, lead string, selected bool) []string {
-	t := m.theme
+func (m Model) renderCard(r row, lead string, selected bool) []string {
+	t, it := m.theme, r.item
 	var vals []string
 	for _, c := range columns(m.currentView(), layout.MD)[1:] {
 		if v := it.Values[c].Text; v != "" && len(vals) < 2 {
 			vals = append(vals, v)
 		}
 	}
-	first := m.symbol(it) + " " + t.Fg("muted").Render(prefix(it))
+	_, in := m.indent(r)
+	first := in + m.symbol(it) + " " + t.Fg("muted").Render(prefix(it))
 	right := strings.Join(vals, " ") + " "
 	first = ansi.Truncate(first, max(0, m.width-1-ansi.StringWidth(right)-1), "…")
 	first += strings.Repeat(" ", max(1, m.width-1-ansi.StringWidth(first)-ansi.StringWidth(right))) + right
