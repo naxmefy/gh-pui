@@ -3,6 +3,7 @@ package gh
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -20,7 +21,11 @@ const fixture = `{
       "groupByFields": { "nodes": [{ "name": "Parent issue" }] },
       "verticalGroupByFields": { "nodes": [{ "name": "Status" }] },
       "sortByFields": { "nodes": [{ "direction": "DESC", "field": { "name": "Estimate" } }] },
-      "fields": { "nodes": [{ "name": "Title" }, {}] } }
+      "fields": { "nodes": [{ "name": "Title" }, {}, { "name": "Estimate" }] },
+      "configuration": { "visibleFields": { "nodes": [{ "name": "Estimate" }, { "name": "Title" }] } } },
+    { "number": 2, "name": "Roadmap", "layout": "ROADMAP_LAYOUT",
+      "fields": { "nodes": [{ "name": "Title" }, { "name": "Status" }] },
+      "configuration": { "visibleFields": { "nodes": [] } } }
   ] },
   "items": { "pageInfo": { "hasNextPage": false, "endCursor": "c" }, "nodes": [
     { "id": "I1", "type": "ISSUE", "isArchived": false,
@@ -49,7 +54,7 @@ func TestToProject(t *testing.T) {
 	}
 	p := toProject("x", &raw)
 
-	if p.Owner != "x" || p.Number != 17 || len(p.Fields) != 3 || len(p.Views) != 1 || len(p.Items) != 2 {
+	if p.Owner != "x" || p.Number != 17 || len(p.Fields) != 3 || len(p.Views) != 2 || len(p.Items) != 2 {
 		t.Fatalf("unexpected shape: %+v", p)
 	}
 	if got := p.Fields[1].Options; len(got) != 1 || got[0].Name != "ui" {
@@ -60,8 +65,11 @@ func TestToProject(t *testing.T) {
 	}
 	v := p.Views[0]
 	if v.Filter != "-status:Later" || v.GroupBy[0] != "Parent issue" || v.VerticalGroupBy[0] != "Status" ||
-		v.SortBy[0] != struct{ Field, Direction string }{"Estimate", "DESC"} || len(v.VisibleFields) != 1 {
+		v.SortBy[0] != struct{ Field, Direction string }{"Estimate", "DESC"} || strings.Join(v.VisibleFields, ",") != "Estimate,Title" {
 		t.Errorf("view = %+v", v)
+	}
+	if r := p.Views[1]; strings.Join(r.VisibleFields, ",") != "Title,Status" {
+		t.Errorf("roadmap without visibleFields should fall back to fields: %v", r.VisibleFields)
 	}
 
 	it := p.Items[0]
