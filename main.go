@@ -71,7 +71,7 @@ func run() error {
 			warn("cache not written: %v", err)
 		}
 		if picked && repo != "" {
-			if err := config.SaveChoice(repo, config.Choice{Owner: ref.Owner, Number: ref.Number}); err != nil {
+			if err := remember(client, repo, ref); err != nil {
 				warn("choice not remembered: %v", err)
 			}
 		}
@@ -103,6 +103,21 @@ func run() error {
 		fmt.Fprintln(os.Stderr, "gh pui:", w)
 	}
 	return err
+}
+
+// remember stores the picked project for the repo, but only one linked to it: a detour to another
+// project via ctrl+p must not replace the repo's project (it would be ignored at the next start anyway).
+func remember(client *gh.Client, repo string, ref gh.ProjectRef) error {
+	linked, err := client.RepoProjects(repo)
+	if err != nil {
+		return err
+	}
+	for _, l := range linked {
+		if l.Owner == ref.Owner && l.Number == ref.Number && !l.Closed {
+			return config.SaveChoice(repo, config.Choice{Owner: ref.Owner, Number: ref.Number})
+		}
+	}
+	return nil
 }
 
 // startPage decides the first screen: a project to open right away (auto), or the picker page to start on.

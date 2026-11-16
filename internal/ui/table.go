@@ -8,7 +8,7 @@ import (
 )
 
 type group struct {
-	Key   string          // the group field's value; "" for items without one
+	Key   string // the group field's value; "" for items without one
 	Label string
 	Items []*project.Item // with show hierarchy only top-level items; sub-issues hang below their parent
 	Count int
