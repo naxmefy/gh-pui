@@ -511,3 +511,14 @@ func (c *Client) UpdateField(projectID, itemID, fieldID string, v FieldValue) er
 	var resp struct{}
 	return c.gql.Do(q, map[string]interface{}{"input": input}, &resp)
 }
+
+// MoveItem puts an item right after afterID in the project's manual order; "" moves it to the top.
+func (c *Client) MoveItem(projectID, itemID, afterID string) error {
+	input := map[string]interface{}{"projectId": projectID, "itemId": itemID}
+	if afterID != "" {
+		input["afterId"] = afterID
+	}
+	const q = `mutation($input:UpdateProjectV2ItemPositionInput!){ updateProjectV2ItemPosition(input:$input){ clientMutationId } }`
+	var resp struct{}
+	return c.gql.Do(q, map[string]interface{}{"input": input}, &resp)
+}

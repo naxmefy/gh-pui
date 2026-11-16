@@ -16,9 +16,12 @@ import (
 // SaveFunc writes a field value to GitHub; gh.Client.UpdateField in production.
 type SaveFunc func(projectID, itemID, fieldID string, v gh.FieldValue) error
 
+// MoveFunc puts an item after afterID in the project's order ("" = top); gh.Client.MoveItem in production.
+type MoveFunc func(projectID, itemID, afterID string) error
+
 // savedMsg reports a finished write; on error the optimistic local value is rolled back to old.
 type savedMsg struct {
-	item  *project.Item
+	id    string // item id: items can be reordered (board moves) while a save is in flight
 	field string
 	old   project.Value
 	err   error

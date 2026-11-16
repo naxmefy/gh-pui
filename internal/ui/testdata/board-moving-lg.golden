@@ -1,0 +1,24 @@
+ gh pui › acme › #7 App roadmap  6 items                                                                                                                  @mona 
+ 1 ▤ Backlog by status  2 ▤ All items   3 ▥ Board   4 ━ Roadmap
+ No Status 1              Σ Estimate 0   ● Todo 1                 Σ Estimate 3   ● In Progress 2          Σ Estimate 7   ● Done 2                  Σ Estimate 1 
+─────────────────────────────────────── ─────────────────────────────────────── ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ ────────────────────────────────────────
+┌─────────────────────────────────────┐ ┌─────────────────────────────────────┐ ┌─────────────────────────────────────┐ ┌──────────────────────────────────────┐
+│ ○ app#21                            │ │ ◌ draft                           3 │ │ ○ app#12                       mona │ │ ◆ app#18                        mona │
+│ Settings page                       │ │ Sketch the onboarding flow          │ │ Login with passkeys                 │ │ Add passkey endpoints                │
+│                                     │ │                                     │ │ 5 · auth, feature                   │ │                                      │
+└─────────────────────────────────────┘ └─────────────────────────────────────┘ └─────────────────────────────────────┘ └──────────────────────────────────────┘
+                                                                                ┌─────────────────────────────────────┐ ┌──────────────────────────────────────┐
+                                                                                │ ○ app#15                     MOVING │ │ ● app#9                            1 │
+                                                                                │ Crash when the cache directory is … │ │ Document the release process         │
+                                                                                │ 2 · bug                             │ │ docs                                 │
+                                                                                └─────────────────────────────────────┘ └──────────────────────────────────────┘
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+ BOARD  MOVE app#15   h/l column  j/k position  enter drop  esc cancel                                                                       col 3/4 · card 2/2 

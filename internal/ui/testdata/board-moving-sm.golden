@@ -1,0 +1,24 @@
+ gh pui › #7 App roadmap                                                  @mona 
+ 1▤  2▤   3 ▥ Board   4━
+ ● Todo 1                 Σ Estimate 3   ● In Progress 2           Σ Estimate 7 
+─────────────────────────────────────── ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+┌─────────────────────────────────────┐ ┌──────────────────────────────────────┐
+│ ◌ draft                           3 │ │ ○ app#12                        mona │
+│ Sketch the onboarding flow          │ │ Login with passkeys                  │
+│                                     │ │ 5 · auth, feature                    │
+└─────────────────────────────────────┘ └──────────────────────────────────────┘
+                                        ┌──────────────────────────────────────┐
+                                        │ ○ app#15                      MOVING │
+                                        │ Crash when the cache directory is r… │
+                                        │ 2 · bug                              │
+                                        └──────────────────────────────────────┘
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+ BOARD  MOVE app#15   h/l column  j/k position  enter drop   col 3/4 · card 2/2 
