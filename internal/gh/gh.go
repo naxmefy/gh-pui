@@ -143,6 +143,7 @@ const projectQuery = `query($owner:String!,$number:Int!,$after:String,$meta:Bool
       verticalGroupByFields(first:5) { nodes { ... on ProjectV2FieldCommon { name } } }
       sortByFields(first:5) { nodes { direction field { ... on ProjectV2FieldCommon { name } } } }
       fields(first:50) { nodes { ... on ProjectV2FieldCommon { name } } }
+      configuration { visibleFields(first:50) { nodes { ... on ProjectV2FieldCommon { name } } } }
     } }
     items(first:100, after:$after, orderBy:{field:POSITION, direction:ASC}) { pageInfo { hasNextPage endCursor } nodes {
       id type isArchived
@@ -205,7 +206,10 @@ type rawProject struct {
 					Field     named
 				}
 			}
-			Fields struct{ Nodes []named }
+			Fields        struct{ Nodes []named }
+			Configuration struct {
+				VisibleFields struct{ Nodes []named }
+			}
 		}
 	}
 	Items struct {
@@ -299,7 +303,10 @@ func toProject(owner string, raw *rawProject) *project.Project {
 	}
 	for _, v := range raw.Views.Nodes {
 		view := project.View{Number: v.Number, Name: v.Name, Layout: v.Layout, Filter: v.Filter,
-			GroupBy: names(v.GroupByFields.Nodes), VerticalGroupBy: names(v.VerticalGroupByFields.Nodes), VisibleFields: names(v.Fields.Nodes)}
+			GroupBy: names(v.GroupByFields.Nodes), VerticalGroupBy: names(v.VerticalGroupByFields.Nodes), VisibleFields: names(v.Configuration.VisibleFields.Nodes)}
+		if len(view.VisibleFields) == 0 { // `fields` is in project order; only roadmap views leave visibleFields empty
+			view.VisibleFields = names(v.Fields.Nodes)
+		}
 		for _, s := range v.SortByFields.Nodes {
 			view.SortBy = append(view.SortBy, project.Sort{Field: s.Field.Name, Direction: s.Direction})
 		}
