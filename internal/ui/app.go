@@ -28,6 +28,7 @@ type App struct {
 	load          ProjectLoader
 	source        ProjectSource
 	save          SaveFunc
+	move          MoveFunc
 	settings      func(owner string, number int) config.ProjectSettings
 	picker        Picker
 	switcher      Switcher
@@ -48,6 +49,12 @@ func NewApp(login string, th theme.Theme, keys KeyMap, picker Picker, load Proje
 // WithSettings supplies projects.yml settings per project (sums, hierarchy, slice).
 func (a App) WithSettings(f func(owner string, number int) config.ProjectSettings) App {
 	a.settings = f
+	return a
+}
+
+// WithMove keeps the position of board moves (gh.Client.MoveItem).
+func (a App) WithMove(f MoveFunc) App {
+	a.move = f
 	return a
 }
 
@@ -101,7 +108,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.switcher.err = err
 			return a, cmd
 		}
-		model := NewModel(a.login, msg.p, a.theme, a.keys).WithSave(a.save)
+		model := NewModel(a.login, msg.p, a.theme, a.keys).WithSave(a.save).WithMove(a.move)
 		if a.settings != nil {
 			model = model.WithSettings(a.settings(msg.p.Owner, msg.p.Number))
 		}

@@ -35,6 +35,8 @@ type Model struct {
 	settings  config.ProjectSettings // local view options from projects.yml
 	slice     map[int]int            // view -> selected slice value (0 = all)
 	expanded  map[string]bool        // item Ref -> sub-issues shown
+	move      MoveFunc               // nil: board moves change the column only
+	board     boardState
 }
 
 // WithSettings applies projects.yml settings the API cannot provide (sums, hierarchy, slice).
@@ -53,7 +55,7 @@ func (m Model) hierarchy() bool {
 // sliceState returns the slice field, its values ("" = items without a value) and the selected index (0 = all).
 func (m Model) sliceState() (field string, values []string, sel int) {
 	field = m.viewSettings().Slice
-	if field == "" {
+	if field == "" || m.isBoard() { // shortcut: no slice panel on boards yet
 		return "", nil, 0
 	}
 	values = sliceValues(m.project, field, viewItems(m.project, m.currentView()))
@@ -67,6 +69,22 @@ func (m Model) WithSave(save SaveFunc) Model {
 }
 
 func (m Model) editing() bool { return m.edit != nil }
+
+// WithMove lets board moves keep the dropped position; without it only the column changes.
+func (m Model) WithMove(move MoveFunc) Model {
+	m.move = move
+	return m
+}
+
+// item finds an item by id; pointers into project.Items go stale when a board move reorders them.
+func (m Model) item(id string) *project.Item {
+	for i := range m.project.Items {
+		if m.project.Items[i].ID == id {
+			return &m.project.Items[i]
+		}
+	}
+	return nil
+}
 
 func NewModel(login string, p *project.Project, th theme.Theme, keys KeyMap) Model {
 	return Model{login: login, project: p, theme: th, keys: keys, width: 80, height: 24, bp: layout.For(80),
@@ -106,15 +124,23 @@ func (m Model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		m.width, m.height, m.bp = msg.Width, msg.Height, layout.For(msg.Width)
 	case savedMsg:
 		m.status, m.statusErr = "", false
-		if msg.err != nil {
-			msg.item.Values[msg.field] = msg.old
+		if it := m.item(msg.id); msg.err != nil && it != nil {
+			it.Values[msg.field] = msg.old
 			m.status, m.statusErr = fmt.Sprintf("%s not saved: %v", msg.field, msg.err), true
+		}
+	case movedMsg:
+		m.status, m.statusErr = "", false
+		if msg.err != nil {
+			m.rollback(msg)
 		}
 	case tea.KeyPressMsg:
 		if m.edit != nil {
 			return m.updateEdit(msg)
 		}
 		m.status, m.statusErr = "", false
+		if m.isBoard() {
+			return m.updateBoard(msg)
+		}
 		_, rs, grouped := m.table()
 		switch {
 		case key.Matches(msg, m.keys.Quit):
@@ -132,7 +158,12 @@ func (m Model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.keys.Right):
 			m.col++
 		case key.Matches(msg, m.keys.Edit) && len(rs) > 0:
-			m.startEdit(rs)
+			col := ""
+			if m.col > 0 {
+				cols, _ := m.visibleCols(rs)
+				col = cols[m.col]
+			}
+			m.startEdit(rs[m.cursor].item, col)
 		case key.Matches(msg, m.keys.Toggle) && len(rs) > 0:
 			m.toggle(rs, grouped)
 		case key.Matches(msg, m.keys.SliceNext, m.keys.SlicePrev):
@@ -157,10 +188,9 @@ func (m Model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// startEdit opens the editor for the focused cell; on the title column it asks which field to edit,
-// which also reaches fields that are hidden or used for grouping (like Status).
-func (m *Model) startEdit(rs []row) {
-	it := rs[m.cursor].item
+// startEdit opens the editor for the field col of an item; without col (the title column, a board card)
+// it asks which field to edit, which also reaches fields that are hidden or used for grouping (like Status).
+func (m *Model) startEdit(it *project.Item, col string) {
 	switch {
 	case m.save == nil:
 		m.status = "read-only"
@@ -168,11 +198,10 @@ func (m *Model) startEdit(rs []row) {
 		m.status = "move to an item to edit it"
 	case it.Type == "REDACTED":
 		m.status = "this item is not accessible"
-	case m.col == 0:
+	case col == "":
 		m.edit = newChooser(m.project, it)
 	default:
-		cols, _ := m.visibleCols(rs)
-		name := cols[m.col]
+		name := col
 		for _, f := range m.project.Fields {
 			if f.Name == name && editable(f) {
 				m.edit = newEditor(it, f)
@@ -204,10 +233,10 @@ func (m Model) updateEdit(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	old := e.item.Values[e.field.Name]
 	e.item.Values[e.field.Name] = val
 	m.status = "saving " + e.field.Name + "…"
-	save, pid, item, field := m.save, m.project.ID, e.item, e.field
+	save, pid, id, field := m.save, m.project.ID, e.item.ID, e.field
 	m.clamp()
 	return m, func() tea.Msg {
-		return savedMsg{item: item, field: field.Name, old: old, err: save(pid, item.ID, field.ID, v)}
+		return savedMsg{id: id, field: field.Name, old: old, err: save(pid, id, field.ID, v)}
 	}
 }
 
@@ -251,11 +280,15 @@ func (m *Model) selectView(i int) {
 	if n == 0 {
 		return
 	}
-	m.view, m.cursor, m.offset = (i%n+n)%n, 0, 0
+	m.view, m.cursor, m.offset, m.board = (i%n+n)%n, 0, 0, boardState{}
 }
 
 // clamp keeps the cursor inside the rows and the scroll offset around the cursor; rows can be two lines high (xs cards).
 func (m *Model) clamp() {
+	if m.isBoard() {
+		m.clampBoard()
+		return
+	}
 	_, rs, _ := m.table()
 	m.cursor = max(0, min(m.cursor, len(rs)-1))
 	cols, _ := m.visibleCols(rs)
@@ -307,6 +340,9 @@ func (m Model) bodyHeight() int {
 }
 
 func (m Model) View() tea.View {
+	if m.isBoard() {
+		return m.finish(strings.Join(m.boardLines(), "\n"))
+	}
 	groups, rs, _ := m.table()
 	cols, widths := m.visibleCols(rs)
 
@@ -346,7 +382,11 @@ func (m Model) View() tea.View {
 	}
 	lines = append(lines, m.renderStatus(rs))
 
-	content := strings.Join(lines, "\n")
+	return m.finish(strings.Join(lines, "\n"))
+}
+
+// finish puts the edit popup over the screen.
+func (m Model) finish(content string) tea.View {
 	if m.edit != nil {
 		content = overlay(m.theme, content, m.edit.lines(m.theme), max(20, min(m.width-4, 50)), m.width, m.height)
 	}

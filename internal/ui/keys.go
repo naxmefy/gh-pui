@@ -22,6 +22,8 @@ type KeyMap struct {
 	Edit      key.Binding
 	SliceNext key.Binding
 	SlicePrev key.Binding
+	Move      key.Binding
+	Cancel    key.Binding
 }
 
 func NewKeyMap(overrides map[string][]string) (KeyMap, error) {
@@ -40,12 +42,14 @@ func NewKeyMap(overrides map[string][]string) (KeyMap, error) {
 		Edit:      key.NewBinding(key.WithKeys("e"), key.WithHelp("e", "edit")),
 		SliceNext: key.NewBinding(key.WithKeys("]"), key.WithHelp("]", "next slice")),
 		SlicePrev: key.NewBinding(key.WithKeys("["), key.WithHelp("[", "prev slice")),
+		Move:      key.NewBinding(key.WithKeys("m"), key.WithHelp("m", "move card")),
+		Cancel:    key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "cancel")),
 	}
 	bindings := map[string]*key.Binding{
 		"quit": &km.Quit, "up": &km.Up, "down": &km.Down, "top": &km.Top, "bottom": &km.Bottom,
 		"toggle": &km.Toggle, "next_view": &km.NextView, "prev_view": &km.PrevView, "switch_project": &km.Switch,
 		"left": &km.Left, "right": &km.Right, "edit": &km.Edit,
-		"slice_next": &km.SliceNext, "slice_prev": &km.SlicePrev,
+		"slice_next": &km.SliceNext, "slice_prev": &km.SlicePrev, "move": &km.Move, "cancel": &km.Cancel,
 	}
 	for action, keys := range overrides {
 		b, ok := bindings[action]

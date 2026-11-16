@@ -60,7 +60,7 @@ func goldenProject() *project.Project {
 			{Number: 1, Name: "Backlog by status", GroupBy: []string{"Status"},
 				VisibleFields: []string{"Title", "Assignees", "Status", "Labels", "Estimate", "Milestone", "Repository", "Linked pull requests"}},
 			{Number: 2, Name: "All items", VisibleFields: []string{"Title", "Status", "Assignees", "Estimate"}},
-			{Number: 3, Name: "Board", Layout: "BOARD_LAYOUT"},
+			{Number: 3, Name: "Board", Layout: "BOARD_LAYOUT", VisibleFields: []string{"Title", "Assignees", "Status", "Estimate", "Labels"}},
 			{Number: 4, Name: "Roadmap", Layout: "ROADMAP_LAYOUT"},
 		},
 		Items: []project.Item{
@@ -97,6 +97,9 @@ func TestGoldenScreens(t *testing.T) {
 		// fresh model: fold state lives in maps shared by model copies
 		fresh, _ := NewModel("mona", goldenProject(), th, keys).WithSettings(settings).Update(size)
 		screens["table-expanded"] = drive(fresh, "tab", "enter", "down") // #12 expanded: #21 shows under it
+		board, _ := NewModel("mona", goldenProject(), th, keys).WithSettings(settings).WithSave(func(string, string, string, gh.FieldValue) error { return nil }).Update(size)
+		screens["board"] = drive(board, "3", "l")
+		screens["board-moving"] = drive(board, "3", "l", "m", "l", "down") // #15 lifted from Todo, over In Progress below #12
 
 		var app tea.Model = NewApp("mona", th, keys, NewPicker(th, lister, Page{Title: "Choose an owner", Subtitle: "Not in a GitHub repo", Entries: OwnerEntries("mona", "acme")}), load, source, nil, nil)
 		app, _ = app.Update(size)

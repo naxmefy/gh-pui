@@ -95,7 +95,7 @@ func run() error {
 		return err
 	}
 	app := ui.NewApp(login, th, keys, ui.NewPicker(th, client.OwnerProjects, first), load, source, client.UpdateField, auto).
-		WithSettings(projects.Settings)
+		WithSettings(projects.Settings).WithMove(client.MoveItem)
 	_, err = tea.NewProgram(app).Run()
 	mu.Lock()
 	defer mu.Unlock()

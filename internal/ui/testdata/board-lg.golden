@@ -1,0 +1,24 @@
+ gh pui › acme › #7 App roadmap  6 items                                                                                                                  @mona 
+ 1 ▤ Backlog by status  2 ▤ All items   3 ▥ Board   4 ━ Roadmap
+ No Status 1              Σ Estimate 0   ● Todo 2                 Σ Estimate 5   ● In Progress 1          Σ Estimate 5   ● Done 2                  Σ Estimate 1 
+─────────────────────────────────────── ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ ─────────────────────────────────────── ────────────────────────────────────────
+┌─────────────────────────────────────┐ ┌─────────────────────────────────────┐ ┌─────────────────────────────────────┐ ┌──────────────────────────────────────┐
+│ ○ app#21                            │ │ ○ app#15                      hubot │ │ ○ app#12                       mona │ │ ◆ app#18                        mona │
+│ Settings page                       │ │ Crash when the cache directory is … │ │ Login with passkeys                 │ │ Add passkey endpoints                │
+│                                     │ │ 2 · bug                             │ │ 5 · auth, feature                   │ │                                      │
+└─────────────────────────────────────┘ └─────────────────────────────────────┘ └─────────────────────────────────────┘ └──────────────────────────────────────┘
+                                        ┌─────────────────────────────────────┐                                         ┌──────────────────────────────────────┐
+                                        │ ◌ draft                           3 │                                         │ ● app#9                            1 │
+                                        │ Sketch the onboarding flow          │                                         │ Document the release process         │
+                                        │                                     │                                         │ docs                                 │
+                                        └─────────────────────────────────────┘                                         └──────────────────────────────────────┘
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+                                                                                                                                                                
+ BOARD   h/l column  j/k card  m move  e edit  enter fold column  tab view  ctrl+p projects  q quit                                          col 2/4 · card 1/2 

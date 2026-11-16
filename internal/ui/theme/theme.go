@@ -43,11 +43,13 @@ var symbolSets = map[string]map[string]string{
 		"issue": "○", "issue.closed": "●", "pr": "◇", "pr.merged": "◆", "draft": "◌",
 		"expanded": "▾", "collapsed": "▸", "dot": "●", "bar": "▌", "sep": "›", "empty": "—", "child": "└",
 		"layout.table": "▤", "layout.board": "▥", "layout.roadmap": "━",
+		"prev": "◂", "next": "▸", "box.h": "─", "box.v": "│", "box.tl": "┌", "box.tr": "┐", "box.bl": "└", "box.br": "┘", "rule.focus": "━",
 	},
 	"ascii": {
 		"issue": "o", "issue.closed": "x", "pr": "p", "pr.merged": "m", "draft": "d",
 		"expanded": "v", "collapsed": ">", "dot": "*", "bar": "|", "sep": ">", "empty": "-", "child": "\\",
 		"layout.table": "#", "layout.board": "|", "layout.roadmap": "=",
+		"prev": "<", "next": ">", "box.h": "-", "box.v": "|", "box.tl": "+", "box.tr": "+", "box.bl": "+", "box.br": "+", "rule.focus": "=",
 	},
 }
 
