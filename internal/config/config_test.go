@@ -91,3 +91,25 @@ func writeFile(t *testing.T, name, content string) {
 		t.Fatal(err)
 	}
 }
+
+func TestChoiceIsOneLineAndReadsTheMapping(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	writeFile(t, "projects.yml", "repos:\n  a/b:\n    owner: x\n    number: 2\n  c/d: org/7\n")
+	p, err := LoadProjects()
+	if err != nil || p.Repos["a/b"] != (Choice{"x", 2}) || p.Repos["c/d"] != (Choice{"org", 7}) {
+		t.Fatalf("got %v %v", p.Repos, err)
+	}
+	if err := SaveChoice("e/f", Choice{"me", 18}); err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(filepath.Join(os.Getenv("XDG_CONFIG_HOME"), "gh-pui", "projects.yml"))
+	for _, want := range []string{"a/b: x/2", "c/d: org/7", "e/f: me/18"} {
+		if !strings.Contains(string(data), want) {
+			t.Errorf("projects.yml lacks %q:\n%s", want, data)
+		}
+	}
+	writeFile(t, "projects.yml", "repos:\n  a/b: nonsense\n")
+	if _, err := LoadProjects(); err == nil || !strings.Contains(err.Error(), "owner/number") {
+		t.Errorf("bad entry should be reported, got %v", err)
+	}
+}

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -13,7 +15,7 @@ import (
 // for view options the GitHub API does not expose.
 //
 //	repos:
-//	  acme/app: {owner: acme, number: 7}
+//	  acme/app: acme/7           # repo -> project (owner/number) opened for it
 //	projects:
 //	  acme/7:
 //	    sum: [Estimate]          # fields summed in group headers (default none)
@@ -21,14 +23,31 @@ import (
 //	    views:                   # per view, overriding the project's values
 //	      Backlog: {hierarchy: false, slice: Priority, sum: []}
 type Projects struct {
-	Repos    map[string]Choice          `yaml:"repos"`
-	Projects map[string]ProjectSettings `yaml:"projects"` // key "owner/number"
+	Repos    map[string]Choice          `yaml:"repos,omitempty"`
+	Projects map[string]ProjectSettings `yaml:"projects,omitempty"` // key "owner/number"
 }
 
 // Choice is the project picked for a repo, so the picker is skipped next time.
+// In projects.yml it is written as "owner/number"; the earlier {owner, number} mapping is still read.
 type Choice struct {
 	Owner  string `yaml:"owner"`
 	Number int    `yaml:"number"`
+}
+
+func (c Choice) MarshalYAML() (any, error) { return fmt.Sprintf("%s/%d", c.Owner, c.Number), nil }
+
+func (c *Choice) UnmarshalYAML(n *yaml.Node) error {
+	if n.Kind == yaml.MappingNode {
+		type plain Choice // no UnmarshalYAML, avoids recursion
+		return n.Decode((*plain)(c))
+	}
+	owner, num, ok := strings.Cut(n.Value, "/")
+	number, err := strconv.Atoi(num)
+	if !ok || owner == "" || err != nil {
+		return fmt.Errorf("line %d: %q is not owner/number", n.Line, n.Value)
+	}
+	*c = Choice{Owner: owner, Number: number}
+	return nil
 }
 
 type ProjectSettings struct {
