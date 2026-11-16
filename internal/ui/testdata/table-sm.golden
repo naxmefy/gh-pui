@@ -5,12 +5,12 @@
 ▌○ app#15 Crash when the cache directory is read-only                  hubot    
  ◌ draft Sketch the onboarding flow                                    —        
  ▾ ● In Progress  1 item · Σ Estimate 5
- ○ app#12 Login with passkeys                                          mona     
+ ○ ▸ app#12 Login with passkeys                                        mona     
  ▾ ● Done  2 items · Σ Estimate 1
  ◆ app#18 Add passkey endpoints                                        mona     
  ● app#9 Document the release process                                  —        
- ▾ No Status  1 item
- ○ app#21 Settings page                                                —        
+
+
 
 
 
@@ -21,4 +21,4 @@
  issue · acme/app#15 · open
  Crash when the cache directory is read-only
  Status: Todo · Assignees: hubot · Labels: bug
- TABLE   j/k move  h/l column  e edit  enter fold  tab view                 1/6 
+ TABLE   j/k move  h/l column  e edit  enter fold  tab view                 1/5 

@@ -2,16 +2,16 @@ package ui
 
 import (
 	"sort"
-	"strings"
 
 	"github.com/naxmefy/gh-pui/internal/project"
 	"github.com/naxmefy/gh-pui/internal/ui/layout"
 )
 
 type group struct {
-	Key   string // the group field's value; "" for items without one
+	Key   string          // the group field's value; "" for items without one
 	Label string
-	Items []*project.Item
+	Items []*project.Item // with show hierarchy only top-level items; sub-issues hang below their parent
+	Count int
 	Sums  []sum
 }
 
@@ -62,20 +62,13 @@ func viewItems(p *project.Project, v project.View) []*project.Item {
 	return items
 }
 
-// estimationNames are the number fields summed when projects.yml does not say otherwise.
-var estimationNames = []string{"estimate", "estimation", "story points", "points"}
-
-// sumFields picks the NUMBER fields summed in group headers: configured ones, else the estimation field, else none.
-func sumFields(p *project.Project, configured *[]string) []string {
-	if configured != nil {
-		return *configured
+// sumFields picks the NUMBER fields summed in group headers: only what projects.yml configures
+// (github.com's field sum is a view setting the API does not expose; its default is the count alone).
+func sumFields(configured *[]string) []string {
+	if configured == nil {
+		return nil
 	}
-	for _, f := range p.Fields {
-		if f.DataType == "NUMBER" && contains(estimationNames, strings.ToLower(f.Name)) {
-			return []string{f.Name}
-		}
-	}
-	return nil
+	return *configured
 }
 
 // sliceValues are the values of the slice field among items, in option order, then first appearance, empty last.
@@ -140,43 +133,68 @@ func groupItems(p *project.Project, v project.View, items []*project.Item, sum [
 		if k == "" && field != "" {
 			label = "No " + field
 		}
-		groups = append(groups, group{Key: k, Label: label, Items: its, Sums: sums(its, sum)})
+		count, sums := tally(its, sum)
+		groups = append(groups, group{Key: k, Label: label, Items: its, Count: count, Sums: sums})
 	}
 	return groups
 }
 
-func sums(items []*project.Item, fields []string) []sum {
+// tally is the one place that counts: it gives the item count and the sums of fields for a list.
+// Which items count is decided before, once: with show hierarchy only top-level ones (see roots),
+// so the count and every sum follow the same rule, like github.com.
+func tally(items []*project.Item, fields []string) (int, []sum) {
 	var out []sum
-	for _, f := range fields {
-		total, any := 0.0, false
+	for _, f := range fields { // a configured field always shows, as 0 without values (github.com does the same)
+		total := 0.0
 		for _, it := range items {
 			if n := it.Values[f].Number; n != nil {
-				total, any = total+*n, true
+				total += *n
 			}
 		}
-		if any {
-			out = append(out, sum{Field: f, Value: total})
+		out = append(out, sum{Field: f, Value: total})
+	}
+	return len(items), out
+}
+
+// roots are the items that are not a sub-issue of another item in the list. A sub-issue whose parent is
+// in the list belongs under that parent, wherever the parent is grouped (github.com's show hierarchy);
+// items caught in a parent cycle count as roots so nothing disappears.
+func roots(all []*project.Item) []*project.Item {
+	present := map[string]bool{}
+	for _, it := range all {
+		if r := it.Ref(); r != "" {
+			present[r] = true
+		}
+	}
+	var out []*project.Item
+	for _, it := range all {
+		if it.Parent == "" || !present[it.Parent] || it.Parent == it.Ref() {
+			out = append(out, it)
+		}
+	}
+	nested, _ := nest(out, all)
+	reached := map[*project.Item]bool{}
+	for _, it := range nested {
+		reached[it] = true
+	}
+	for _, it := range all {
+		if !reached[it] {
+			out = append(out, it)
+			nested, _ = nest([]*project.Item{it}, all)
+			for _, n := range nested {
+				reached[n] = true
+			}
 		}
 	}
 	return out
 }
 
-// nest orders items so sub-issues follow their parent (depth+1) when the parent is among them;
-// the rest keep their order at depth 0.
-func nest(items []*project.Item) ([]*project.Item, []int) {
-	present := map[string]bool{}
-	for _, it := range items {
-		if r := it.Ref(); r != "" {
-			present[r] = true
-		}
-	}
+// nest lists each root followed by its sub-issues (looked up among all), depth-first, with their depth.
+func nest(rootItems, all []*project.Item) ([]*project.Item, []int) {
 	children := map[string][]*project.Item{}
-	var roots []*project.Item
-	for _, it := range items {
-		if it.Parent != "" && present[it.Parent] && it.Parent != it.Ref() {
+	for _, it := range all {
+		if it.Parent != "" && it.Parent != it.Ref() {
 			children[it.Parent] = append(children[it.Parent], it)
-		} else {
-			roots = append(roots, it)
 		}
 	}
 	var out []*project.Item
@@ -193,18 +211,15 @@ func nest(items []*project.Item) ([]*project.Item, []int) {
 			walk(c, d+1)
 		}
 	}
-	for _, it := range roots {
-		walk(it, 0)
-	}
-	for _, it := range items { // parent cycles: nothing is lost
+	for _, it := range rootItems {
 		walk(it, 0)
 	}
 	return out, depths
 }
 
-// rows flattens groups into table lines; an ungrouped view has no header lines. With hierarchy, sub-issues
-// follow their parent and stay hidden until the parent is expanded (by Ref), like github.com.
-func rows(groups []group, grouped bool, collapsed map[string]bool, hierarchy bool, expanded map[string]bool) []row {
+// rows flattens groups into table lines; an ungrouped view has no header lines. With show hierarchy (all set:
+// every item of the view), sub-issues follow their parent and stay hidden until it is expanded, like github.com.
+func rows(groups []group, grouped bool, collapsed map[string]bool, all []*project.Item, expanded map[string]bool) []row {
 	var out []row
 	for gi, g := range groups {
 		if grouped {
@@ -214,8 +229,8 @@ func rows(groups []group, grouped bool, collapsed map[string]bool, hierarchy boo
 			}
 		}
 		items, depths := g.Items, make([]int, len(g.Items))
-		if hierarchy {
-			items, depths = nest(g.Items)
+		if all != nil { // show hierarchy
+			items, depths = nest(g.Items, all)
 		}
 		hideBelow := -1 // depth of a collapsed parent whose subtree is skipped
 		for i, it := range items {
@@ -234,22 +249,6 @@ func rows(groups []group, grouped bool, collapsed map[string]bool, hierarchy boo
 			if children > 0 && !expanded[it.Ref()] {
 				hideBelow = d
 			}
-		}
-	}
-	return out
-}
-
-// topLevel keeps the items that are not sub-issues of another item in the list; with show hierarchy,
-// github.com counts only these, and sums follow the same rule so an estimate is not counted twice.
-func topLevel(items []*project.Item) []*project.Item {
-	present := map[string]bool{}
-	for _, it := range items {
-		present[it.Ref()] = true
-	}
-	var out []*project.Item
-	for _, it := range items {
-		if it.Parent == "" || !present[it.Parent] {
-			out = append(out, it)
 		}
 	}
 	return out

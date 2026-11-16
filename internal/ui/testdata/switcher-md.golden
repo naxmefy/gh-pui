@@ -1,16 +1,16 @@
  gh pui › #7 App roadmap                                                                                          @mona
   1 ▤ Backlog by status   2 ▤ All items  3 ▥ Board  4 ━ Roadmap
    TITLE                                                                         ASSIGNEES  STATUS         LABELS
- ▾ ● Todo  2 items · Σ Estim╭──────────────────────────────────────────────────────────────╮                            
+ ▾ ● Todo  2 items          ╭──────────────────────────────────────────────────────────────╮                            
  ○ app#15 Crash when the cac│ Switch project                                               │● Todo         bug
  ◌ draft Sketch the onboardi│ All  This repo  Org  Me                                      │● Todo         —
- ▾ ● In Progress  1 item · Σ│ > ▌                                                          │
- ○ app#12 Login with passkey│                                                              │● In Progress  auth, feature
- ▾ ● Done  2 items · Σ Estim│ ▌ App roadmap                                                │
+ ▾ ● In Progress  1 item    │ > ▌                                                          │
+ ○ ▸ app#12 Login with passk│                                                              │● In Progress  auth, feature
+ ▾ ● Done  2 items          │ ▌ App roadmap                                                │
  ◆ app#18 Add passkey endpoi│ ▌ acme/#7                                                    │● Done         —
  ● app#9 Document the releas│   Support queue                                              │● Done         docs
- ▾ No Status  1 item        │   acme/#2                                                    │
- ○ app#21 Settings page     │   Personal tasks                                             │—              —
+                            │   acme/#2                                                    │
+                            │   Personal tasks                                             │
                             │   mona/#1                                                    │
                             │                                                              │
                             │ tab scope · enter open · esc close                           │
@@ -21,4 +21,4 @@
 
 
 
- TABLE   j/k move  h/l column  e edit  enter fold  tab view  ctrl+p projects  q quit                  row –/6 · col 1/4
+ TABLE   j/k move  h/l column  e edit  enter fold  tab view  ctrl+p projects  q quit                  row –/5 · col 1/4

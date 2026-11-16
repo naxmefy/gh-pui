@@ -90,7 +90,7 @@ func TestGoldenScreens(t *testing.T) {
 		screens := map[string]tea.Model{}
 
 		// the second view is sliced by Status (a projects.yml setting) and shows #21 nested under its parent #12
-		settings := config.ProjectSettings{Views: map[string]config.ViewSettings{"All items": {Slice: "Status"}}}
+		settings := config.ProjectSettings{Sum: &[]string{"Estimate"}, Views: map[string]config.ViewSettings{"All items": {Slice: "Status"}}}
 		m, _ := NewModel("mona", goldenProject(), th, keys).WithSettings(settings).Update(size)
 		screens["table"] = drive(m, "down") // cursor on an item, so the peek is filled
 		screens["table-ungrouped"] = drive(m, "tab", "down", "l")

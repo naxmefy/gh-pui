@@ -1,7 +1,7 @@
  gh pui › #7 App roadmap                                                                                          @mona 
  1 ▤ Backlog by status   2 ▤ All items   3 ▥ Board  4 ━ Roadmap
  STATUS                │   TITLE                                                      STATUS         ASSIGNEES  ESTIMATE
-▌All                 6 │ ○ ▾ app#12 Login with passkeys                               ● In Progress  mona       5       
+▌All                 5 │ ○ ▾ app#12 Login with passkeys                               ● In Progress  mona       5       
  Todo                2 │▌○ └ app#21 Settings page                                     —              —          —       
  In Progress         1 │ ○ app#15 Crash when the cache directory is read-only         ● Todo         hubot      2       
  Done                2 │ ◌ draft Sketch the onboarding flow                           ● Todo         —          3       

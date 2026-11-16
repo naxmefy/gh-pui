@@ -16,9 +16,10 @@ import (
 //	  acme/app: {owner: acme, number: 7}
 //	projects:
 //	  acme/7:
-//	    sum: [Estimate]          # fields summed in group headers; [] = count only
-//	    views:
-//	      Backlog: {hierarchy: false, slice: Priority}
+//	    sum: [Estimate]          # fields summed in group headers (default none)
+//	    count: false             # hide the item count (default shown)
+//	    views:                   # per view, overriding the project's values
+//	      Backlog: {hierarchy: false, slice: Priority, sum: []}
 type Projects struct {
 	Repos    map[string]Choice          `yaml:"repos"`
 	Projects map[string]ProjectSettings `yaml:"projects"` // key "owner/number"
@@ -31,13 +32,31 @@ type Choice struct {
 }
 
 type ProjectSettings struct {
-	Sum   *[]string               `yaml:"sum"`   // nil: the project's estimation field
+	Sum   *[]string               `yaml:"sum"`   // number fields summed in group headers; nil = none
+	Count *bool                   `yaml:"count"` // nil: shown
 	Views map[string]ViewSettings `yaml:"views"` // by view name
 }
 
 type ViewSettings struct {
-	Hierarchy *bool  `yaml:"hierarchy"` // nil: on, like github.com
-	Slice     string `yaml:"slice"`     // field name, "" = no slicing
+	Sum       *[]string `yaml:"sum"`       // nil: the project's
+	Count     *bool     `yaml:"count"`     // nil: the project's
+	Hierarchy *bool     `yaml:"hierarchy"` // nil: on, like github.com
+	Slice     string    `yaml:"slice"`     // field name, "" = no slicing
+}
+
+// SumFor and CountFor resolve a view's field sum: the view's setting, else the project's, else the default.
+func (s ProjectSettings) SumFor(view string) *[]string {
+	if v := s.Views[view].Sum; v != nil {
+		return v
+	}
+	return s.Sum
+}
+
+func (s ProjectSettings) CountFor(view string) bool {
+	if v := s.Views[view].Count; v != nil {
+		return *v
+	}
+	return s.Count == nil || *s.Count
 }
 
 // Settings returns the settings of one project (zero value when none are configured).
