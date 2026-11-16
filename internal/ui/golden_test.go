@@ -69,7 +69,7 @@ func goldenProject() *project.Project {
 			{ID: "c", Type: "DRAFT_ISSUE", Title: "Sketch the onboarding flow", Values: map[string]project.Value{"Status": v("Todo"), "Estimate": n(3, "3")}},
 			{ID: "d", Type: "PULL_REQUEST", Number: 18, Title: "Add passkey endpoints", State: "MERGED", Repo: "acme/app", Values: map[string]project.Value{"Status": v("Done"), "Assignees": v("mona"), "Repository": v("acme/app"), "Linked pull requests": v("#12")}},
 			issue("e", 9, "Document the release process", "CLOSED", map[string]project.Value{"Status": v("Done"), "Labels": v("docs"), "Estimate": n(1, "1"), "Milestone": v("v0.9"), "Repository": v("acme/app")}),
-			issue("f", 21, "Settings page", "OPEN", map[string]project.Value{"Repository": v("acme/app")}),
+			{ID: "f", Type: "ISSUE", Number: 21, Title: "Settings page", State: "OPEN", Repo: "acme/app", Parent: "acme/app#12", Values: map[string]project.Value{"Repository": v("acme/app"), "Parent issue": v("#12 Login with passkeys")}},
 		},
 	}
 }
@@ -89,7 +89,9 @@ func TestGoldenScreens(t *testing.T) {
 		size := tea.WindowSizeMsg{Width: w.width, Height: 24}
 		screens := map[string]tea.Model{}
 
-		m, _ := NewModel("mona", goldenProject(), th, keys).Update(size)
+		// the second view is sliced by Status (a projects.yml setting) and shows #21 nested under its parent #12
+		settings := config.ProjectSettings{Views: map[string]config.ViewSettings{"All items": {Slice: "Status"}}}
+		m, _ := NewModel("mona", goldenProject(), th, keys).WithSettings(settings).Update(size)
 		screens["table"] = drive(m, "down") // cursor on an item, so the peek is filled
 		screens["table-ungrouped"] = drive(m, "tab", "down", "l")
 

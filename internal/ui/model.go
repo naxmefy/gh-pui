@@ -9,6 +9,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
+	"github.com/naxmefy/gh-pui/internal/config"
 	"github.com/naxmefy/gh-pui/internal/project"
 	"github.com/naxmefy/gh-pui/internal/ui/layout"
 	"github.com/naxmefy/gh-pui/internal/ui/theme"
@@ -31,6 +32,31 @@ type Model struct {
 	save      SaveFunc                // nil: read-only
 	status    string                  // one-shot message in place of the help line
 	statusErr bool
+	settings  config.ProjectSettings // local view options from projects.yml
+	slice     map[int]int            // view -> selected slice value (0 = all)
+}
+
+// WithSettings applies projects.yml settings the API cannot provide (sums, hierarchy, slice).
+func (m Model) WithSettings(s config.ProjectSettings) Model {
+	m.settings = s
+	return m
+}
+
+func (m Model) viewSettings() config.ViewSettings { return m.settings.Views[m.currentView().Name] }
+
+func (m Model) hierarchy() bool {
+	h := m.viewSettings().Hierarchy
+	return h == nil || *h
+}
+
+// sliceState returns the slice field, its values ("" = items without a value) and the selected index (0 = all).
+func (m Model) sliceState() (field string, values []string, sel int) {
+	field = m.viewSettings().Slice
+	if field == "" {
+		return "", nil, 0
+	}
+	values = sliceValues(m.project, field, viewItems(m.project, m.currentView()))
+	return field, values, min(m.slice[m.view], len(values))
 }
 
 // WithSave enables editing; without it the table is read-only.
@@ -43,7 +69,7 @@ func (m Model) editing() bool { return m.edit != nil }
 
 func NewModel(login string, p *project.Project, th theme.Theme, keys KeyMap) Model {
 	return Model{login: login, project: p, theme: th, keys: keys, width: 80, height: 24, bp: layout.For(80),
-		collapsed: map[int]map[string]bool{}}
+		collapsed: map[int]map[string]bool{}, slice: map[int]int{}}
 }
 
 func (m Model) Init() tea.Cmd {
@@ -60,8 +86,12 @@ func (m Model) currentView() project.View {
 func (m Model) table() (groups []group, rs []row, grouped bool) {
 	v := m.currentView()
 	grouped = len(v.GroupBy) > 0
-	groups = groupItems(m.project, v, viewItems(m.project, v))
-	return groups, rows(groups, grouped, m.collapsed[m.view]), grouped
+	items := viewItems(m.project, v)
+	if field, values, sel := m.sliceState(); sel > 0 {
+		items = sliceItems(items, field, values[sel-1])
+	}
+	groups = groupItems(m.project, v, items, sumFields(m.project, m.settings.Sum))
+	return groups, rows(groups, grouped, m.collapsed[m.view], m.hierarchy()), grouped
 }
 
 func (m Model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
@@ -99,6 +129,14 @@ func (m Model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			m.startEdit(rs)
 		case key.Matches(msg, m.keys.Toggle) && grouped && len(rs) > 0:
 			m.toggle(rs)
+		case key.Matches(msg, m.keys.SliceNext, m.keys.SlicePrev):
+			if _, values, sel := m.sliceState(); values != nil {
+				step := 1
+				if key.Matches(msg, m.keys.SlicePrev) {
+					step = len(values)
+				}
+				m.slice[m.view], m.cursor, m.offset = (sel+step)%(len(values)+1), 0, 0
+			}
 		case key.Matches(msg, m.keys.NextView):
 			m.selectView(m.view + 1)
 		case key.Matches(msg, m.keys.PrevView):
@@ -248,21 +286,37 @@ func (m Model) View() tea.View {
 	groups, rs, _ := m.table()
 	cols, widths := m.visibleCols(rs)
 
-	lines := []string{m.renderTop()}
+	bm := m.bodyModel()
+	var table []string
 	if m.bp > layout.XS {
-		lines = append(lines, m.renderTabs(), m.renderColumns(cols, widths))
+		table = append(table, bm.renderColumns(cols, widths))
 	}
 	body := m.bodyHeight()
 	for i, used := m.offset, 0; i < len(rs) && used+m.rowLines(rs[i]) <= body; i++ {
-		lines = append(lines, m.renderRow(rs[i], groups, cols, widths, i == m.cursor)...)
+		table = append(table, bm.renderRow(rs[i], groups, cols, widths, i == m.cursor)...)
 		used += m.rowLines(rs[i])
 	}
 	if len(rs) == 0 {
-		lines = append(lines, m.theme.Fg("muted").Render(" No items in this view"))
+		table = append(table, m.theme.Fg("muted").Render(" No items in this view"))
 	}
-	for len(lines) < m.chromeHeight()-1+body {
-		lines = append(lines, "")
+	want := body
+	if m.bp > layout.XS {
+		want++ // column header
 	}
+	for len(table) < want {
+		table = append(table, "")
+	}
+	if m.showSlicePanel() {
+		panel := m.renderSlicePanel(len(table))
+		for i := range table {
+			table[i] = panel[i] + table[i]
+		}
+	}
+	lines := []string{m.renderTop()}
+	if m.bp > layout.XS {
+		lines = append(lines, m.renderTabs())
+	}
+	lines = append(lines, table...)
 	if m.showPeek() {
 		lines = append(lines, m.renderPeek(rs)...)
 	}
@@ -336,7 +390,27 @@ func (m Model) renderTabs() string {
 		}
 		parts = append(parts, t.Fg("muted").Render(label))
 	}
-	return ansi.Truncate(" "+strings.Join(parts, "  "), m.width, "…")
+	left := " " + strings.Join(parts, "  ")
+	if field, values, sel := m.sliceState(); field != "" && !m.showSlicePanel() { // sm: the slice panel does not fit
+		value := "All"
+		if sel > 0 {
+			value = values[sel-1]
+			if value == "" {
+				value = "No " + field
+			}
+		}
+		return m.spread(left, t.Fg("muted").Render(field+": ")+value+" ")
+	}
+	return ansi.Truncate(left, m.width, "…")
+}
+
+// indent marks sub-issues under their parent (show hierarchy).
+func (m Model) indent(depth int) (plain, styled string) {
+	if depth == 0 {
+		return "", ""
+	}
+	plain = strings.Repeat("  ", depth-1) + m.theme.Symbol("child") + " "
+	return plain, m.theme.Fg("muted").Render(plain)
 }
 
 // prefix is the muted part before a title: repo#number, or "draft".
@@ -391,9 +465,59 @@ func (m Model) cell(it *project.Item, col string) (plain, styled string) {
 
 // visibleCols are the view's columns that fit the width, with their widths.
 func (m Model) visibleCols(rs []row) ([]string, []int) {
+	bm := m.bodyModel()
 	cols := columns(m.currentView(), m.bp)
-	widths := m.columnWidths(cols, rs)
+	widths := bm.columnWidths(cols, rs)
 	return cols[:len(widths)], widths
+}
+
+const slicePanelWidth = 24
+
+func (m Model) showSlicePanel() bool {
+	field, _, _ := m.sliceState()
+	return field != "" && m.bp >= layout.MD
+}
+
+// bodyModel is the model the table body renders with: narrower by the slice panel when it is shown.
+func (m Model) bodyModel() Model {
+	if m.showSlicePanel() {
+		m.width -= slicePanelWidth
+	}
+	return m
+}
+
+// renderSlicePanel lists the slice field's values with counts; the first line sits next to the column header.
+func (m Model) renderSlicePanel(height int) []string {
+	t := m.theme
+	field, values, sel := m.sliceState()
+	items := viewItems(m.project, m.currentView())
+	labels := []string{"All"}
+	counts := []int{len(items)}
+	for _, v := range values {
+		label := v
+		if v == "" {
+			label = "No " + field
+		}
+		labels, counts = append(labels, label), append(counts, len(sliceItems(items, field, v)))
+	}
+	w := slicePanelWidth - 2
+	lines := []string{t.Fg("muted").Render(pad(" "+strings.ToUpper(field), w))}
+	for i, l := range labels {
+		n := strconv.Itoa(counts[i])
+		text := pad(" "+l, w-len(n)-1) + " " + n
+		if i == sel {
+			lines = append(lines, t.Fg("accent").Render(t.Symbol("bar"))+lipgloss.NewStyle().Bold(true).Render(ansi.Truncate(text[1:], w-1, "")))
+		} else {
+			lines = append(lines, text)
+		}
+	}
+	for len(lines) < height {
+		lines = append(lines, "")
+	}
+	for i, l := range lines[:height] {
+		lines[i] = pad(l, w) + " " + t.Fg("border").Render("│")
+	}
+	return lines[:height]
 }
 
 // columnWidths gives every non-title column its content width (max 24) and the rest to Title,
@@ -506,6 +630,10 @@ func (m Model) renderRow(r row, groups []group, cols []string, widths []int, sel
 				st = focus
 			}
 			plain, _ := m.cell(it, c)
+			if i == 0 {
+				in, _ := m.indent(r.depth)
+				plain = in + plain
+			}
 			b.WriteString(st.Render(pad(plain, widths[i])))
 		}
 		b.WriteString(sel.Render(strings.Repeat(" ", max(0, m.width-ansi.StringWidth(b.String())))))
@@ -514,6 +642,10 @@ func (m Model) renderRow(r row, groups []group, cols []string, widths []int, sel
 	cells := make([]string, len(cols))
 	for i, c := range cols {
 		_, styled := m.cell(it, c)
+		if i == 0 {
+			_, in := m.indent(r.depth)
+			styled = in + styled
+		}
 		cells[i] = pad(styled, widths[i])
 	}
 	return []string{ansi.Truncate(lead+m.symbol(it)+" "+strings.Join(cells, "  "), m.width, "…")}
@@ -615,6 +747,9 @@ func (m Model) renderStatus(rs []row) string {
 			{k.NextView.Help().Key, "view"},
 			{k.Switch.Help().Key, "projects"},
 			{k.Quit.Help().Key, "quit"},
+		}
+		if field, _, _ := m.sliceState(); field != "" {
+			pairs = append(pairs[:5:5], append([][2]string{{k.SlicePrev.Help().Key + "/" + k.SliceNext.Help().Key, "slice"}}, pairs[5:]...)...)
 		}
 		room := m.width - ansi.StringWidth(left) - ansi.StringWidth(right) - 3
 		for _, p := range pairs { // whole hints only, as many as fit

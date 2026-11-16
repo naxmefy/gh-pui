@@ -1,16 +1,16 @@
  gh pui › acme › #7 App roadmap  6 items                                                                                                                                                          @mona 
-  1 ▤ Backlog by status   2 ▤ All items  3 ▥ Board  4 ▬ Roadmap
-   TITLE                                                                                                                 ASSIGNEES  LABELS         ESTIMATE  MILESTONE  REPOSITORY  LINKED PULL REQUESTS
+  1 ▤ Backlog by status   2 ▤ All items  3 ▥ Board  4 ━ Roadmap
+   TITLE                                                                                                  ASSIGNEES  STATUS         LABELS         ESTIMATE  MILESTONE  REPOSITORY  LINKED PULL REQUESTS
  ▾ ● Todo  2 items · Σ Estimate 5
-▌○ app#15 Crash when the cache directory is read-only                                                                    hubot      bug            2         —          acme/app    —                   
- ◌ draft Sketch the onboarding flow                                                                                      —          —              3         —          —           —                   
+▌○ app#15 Crash when the cache directory is read-only                                                     hubot      ● Todo         bug            2         —          acme/app    —                   
+ ◌ draft Sketch the onboarding flow                                                                       —          ● Todo         —              3         —          —           —                   
  ▾ ● In Progress  1 item · Σ Estimate 5
- ○ app#12 Login with passkeys                                                                                            mona       auth, feature  5         v1.0       acme/app    —                   
+ ○ app#12 Login with passkeys                                                                             mona       ● In Progress  auth, feature  5         v1.0       acme/app    —                   
  ▾ ● Done  2 items · Σ Estimate 1
- ◆ app#18 Add passkey endpoints                                                                                          mona       —              —         —          acme/app    #12                 
- ● app#9 Document the release process                                                                                    —          docs           1         v0.9       acme/app    —                   
+ ◆ app#18 Add passkey endpoints                                                                           mona       ● Done         —              —         —          acme/app    #12                 
+ ● app#9 Document the release process                                                                     —          ● Done         docs           1         v0.9       acme/app    —                   
  ▾ No Status  1 item
- ○ app#21 Settings page                                                                                                  —          —              —         —          acme/app    —                   
+ ○ app#21 Settings page                                                                                   —          —              —              —         —          acme/app    —                   
 
 
 
@@ -21,4 +21,4 @@
  issue · acme/app#15 · open
  Crash when the cache directory is read-only
  Status: Todo · Assignees: hubot · Labels: bug
- TABLE   j/k move  h/l column  e edit  enter fold  tab view  ctrl+p projects  q quit                                                                                                  row 1/6 · col 1/7 
+ TABLE   j/k move  h/l column  e edit  enter fold  tab view  ctrl+p projects  q quit                                                                                                  row 1/6 · col 1/8 

@@ -102,3 +102,18 @@ func TestXSCardsScrollAndStatusbar(t *testing.T) {
 		t.Errorf("screen has %d lines, want 8:\n%s", n, s)
 	}
 }
+
+func TestSliceKeysNarrowTheTable(t *testing.T) {
+	sliced := func() tea.Model { // fresh each time: slice state lives in a map shared by model copies
+		m := newTestModel(t).(Model).WithSettings(config.ProjectSettings{Views: map[string]config.ViewSettings{"By status": {Slice: "Status"}}})
+		tm, _ := tea.Model(m).Update(tea.WindowSizeMsg{Width: 120, Height: 30})
+		return tm
+	}
+	s := screen(press(sliced(), "]")) // All → Todo
+	if !strings.Contains(s, "○ B") || !strings.Contains(s, "○ D") || strings.Contains(s, "○ A") || !strings.Contains(s, "▌Todo") {
+		t.Errorf("slice Todo wrong:\n%s", s)
+	}
+	if s := screen(press(sliced(), "[")); !strings.Contains(s, "▌No Status") || !strings.Contains(s, "○ C") || strings.Contains(s, "○ B") {
+		t.Errorf("[ from All should wrap to the last value:\n%s", s)
+	}
+}

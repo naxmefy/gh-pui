@@ -5,6 +5,7 @@ import (
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
+	"github.com/naxmefy/gh-pui/internal/config"
 	"github.com/naxmefy/gh-pui/internal/gh"
 	"github.com/naxmefy/gh-pui/internal/project"
 	"github.com/naxmefy/gh-pui/internal/ui/theme"
@@ -27,6 +28,7 @@ type App struct {
 	load          ProjectLoader
 	source        ProjectSource
 	save          SaveFunc
+	settings      func(owner string, number int) config.ProjectSettings
 	picker        Picker
 	switcher      Switcher
 	switching     bool
@@ -41,6 +43,12 @@ type App struct {
 func NewApp(login string, th theme.Theme, keys KeyMap, picker Picker, load ProjectLoader, source ProjectSource, save SaveFunc, auto *gh.ProjectRef) App {
 	return App{login: login, theme: th, keys: keys, load: load, source: source, save: save, picker: picker, loading: auto,
 		switcher: Switcher{theme: th, login: login}, width: 80, height: 24}
+}
+
+// WithSettings supplies projects.yml settings per project (sums, hierarchy, slice).
+func (a App) WithSettings(f func(owner string, number int) config.ProjectSettings) App {
+	a.settings = f
+	return a
 }
 
 func (a App) loadCmd() tea.Cmd {
@@ -93,7 +101,11 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.switcher.err = err
 			return a, cmd
 		}
-		m, _ := NewModel(a.login, msg.p, a.theme, a.keys).WithSave(a.save).Update(tea.WindowSizeMsg{Width: a.width, Height: a.height})
+		model := NewModel(a.login, msg.p, a.theme, a.keys).WithSave(a.save)
+		if a.settings != nil {
+			model = model.WithSettings(a.settings(msg.p.Owner, msg.p.Number))
+		}
+		m, _ := model.Update(tea.WindowSizeMsg{Width: a.width, Height: a.height})
 		t := m.(Model)
 		a.table = &t
 		return a, nil

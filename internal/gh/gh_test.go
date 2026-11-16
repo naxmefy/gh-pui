@@ -25,7 +25,7 @@ const fixture = `{
   "items": { "pageInfo": { "hasNextPage": false, "endCursor": "c" }, "nodes": [
     { "id": "I1", "type": "ISSUE", "isArchived": false,
       "content": { "__typename": "Issue", "title": "Fix it", "number": 7, "state": "OPEN", "url": "u", "repository": { "nameWithOwner": "x/y" },
-        "parent": { "number": 4, "title": "Epic" }, "subIssuesSummary": { "completed": 1, "total": 3 } },
+        "parent": { "number": 4, "title": "Epic", "repository": { "nameWithOwner": "acme/app" } }, "subIssuesSummary": { "completed": 1, "total": 3 } },
       "fieldValues": { "nodes": [
         { "__typename": "ProjectV2ItemFieldNumberValue", "number": 3.5, "field": { "name": "Estimate" } },
         { "__typename": "ProjectV2ItemFieldSingleSelectValue", "name": "Todo", "field": { "name": "Status" } },
@@ -65,7 +65,7 @@ func TestToProject(t *testing.T) {
 	}
 
 	it := p.Items[0]
-	if it.Title != "Fix it" || it.Number != 7 || it.Repo != "x/y" {
+	if it.Title != "Fix it" || it.Number != 7 || it.Repo != "x/y" || it.Parent != "acme/app#4" || it.Ref() != "x/y#7" {
 		t.Errorf("item = %+v", it)
 	}
 	want := map[string]string{"Estimate": "3.5", "Status": "Todo", "Area": "ui, api", "Sprint": "Sprint 2",

@@ -1,6 +1,8 @@
 // Package project holds the domain model of a GitHub Project (v2), independent of the API wire format.
 package project
 
+import "fmt"
+
 type Project struct {
 	ID     string
 	Owner  string
@@ -60,8 +62,19 @@ type Item struct {
 	URL      string
 	Repo     string
 	Archived bool
+	Parent   string           // Ref of the parent issue, "" without one
 	Values   map[string]Value // by field name
 }
+
+// Ref identifies an issue or pull request across repos, e.g. "acme/app#12"; drafts have none.
+func Ref(repo string, number int) string {
+	if repo == "" || number == 0 {
+		return ""
+	}
+	return fmt.Sprintf("%s#%d", repo, number)
+}
+
+func (it Item) Ref() string { return Ref(it.Repo, it.Number) }
 
 // Value is a field value ready for display; Number is set only for NUMBER fields so sums can be computed.
 type Value struct {

@@ -2,6 +2,7 @@ package ui
 
 import (
 	"sort"
+	"strings"
 
 	"github.com/naxmefy/gh-pui/internal/project"
 	"github.com/naxmefy/gh-pui/internal/ui/layout"
@@ -23,6 +24,7 @@ type sum struct {
 type row struct {
 	group int
 	item  *project.Item
+	depth int // nesting below a parent issue (show hierarchy)
 }
 
 // viewItems returns the items the view shows: not archived, matching the view's saved filter, sorted.
@@ -59,8 +61,44 @@ func viewItems(p *project.Project, v project.View) []*project.Item {
 	return items
 }
 
+// estimationNames are the number fields summed when projects.yml does not say otherwise.
+var estimationNames = []string{"estimate", "estimation", "story points", "points"}
+
+// sumFields picks the NUMBER fields summed in group headers: configured ones, else the estimation field, else none.
+func sumFields(p *project.Project, configured *[]string) []string {
+	if configured != nil {
+		return *configured
+	}
+	for _, f := range p.Fields {
+		if f.DataType == "NUMBER" && contains(estimationNames, strings.ToLower(f.Name)) {
+			return []string{f.Name}
+		}
+	}
+	return nil
+}
+
+// sliceValues are the values of the slice field among items, in option order, then first appearance, empty last.
+func sliceValues(p *project.Project, field string, items []*project.Item) []string {
+	var out []string
+	for _, g := range groupItems(p, project.View{GroupBy: []string{field}}, items, nil) {
+		out = append(out, g.Key)
+	}
+	return out
+}
+
+// sliceItems keeps the items whose slice field has value.
+func sliceItems(items []*project.Item, field, value string) []*project.Item {
+	var out []*project.Item
+	for _, it := range items {
+		if it.Values[field].Text == value {
+			out = append(out, it)
+		}
+	}
+	return out
+}
+
 // groupItems groups by the view's group field in the field's own option/iteration order, empty values last.
-func groupItems(p *project.Project, v project.View, items []*project.Item) []group {
+func groupItems(p *project.Project, v project.View, items []*project.Item, sum []string) []group {
 	field := ""
 	if len(v.GroupBy) > 0 {
 		field = v.GroupBy[0]
@@ -101,32 +139,70 @@ func groupItems(p *project.Project, v project.View, items []*project.Item) []gro
 		if k == "" && field != "" {
 			label = "No " + field
 		}
-		groups = append(groups, group{Key: k, Label: label, Items: its, Sums: sums(p, its)})
+		groups = append(groups, group{Key: k, Label: label, Items: its, Sums: sums(its, sum)})
 	}
 	return groups
 }
 
-func sums(p *project.Project, items []*project.Item) []sum {
+func sums(items []*project.Item, fields []string) []sum {
 	var out []sum
-	for _, f := range p.Fields {
-		if f.DataType != "NUMBER" {
-			continue
-		}
+	for _, f := range fields {
 		total, any := 0.0, false
 		for _, it := range items {
-			if n := it.Values[f.Name].Number; n != nil {
+			if n := it.Values[f].Number; n != nil {
 				total, any = total+*n, true
 			}
 		}
 		if any {
-			out = append(out, sum{Field: f.Name, Value: total})
+			out = append(out, sum{Field: f, Value: total})
 		}
 	}
 	return out
 }
 
+// nest orders items so sub-issues follow their parent (depth+1) when the parent is among them;
+// the rest keep their order at depth 0.
+func nest(items []*project.Item) ([]*project.Item, []int) {
+	present := map[string]bool{}
+	for _, it := range items {
+		if r := it.Ref(); r != "" {
+			present[r] = true
+		}
+	}
+	children := map[string][]*project.Item{}
+	var roots []*project.Item
+	for _, it := range items {
+		if it.Parent != "" && present[it.Parent] && it.Parent != it.Ref() {
+			children[it.Parent] = append(children[it.Parent], it)
+		} else {
+			roots = append(roots, it)
+		}
+	}
+	var out []*project.Item
+	var depths []int
+	seen := map[*project.Item]bool{}
+	var walk func(it *project.Item, d int)
+	walk = func(it *project.Item, d int) {
+		if seen[it] {
+			return
+		}
+		seen[it] = true
+		out, depths = append(out, it), append(depths, d)
+		for _, c := range children[it.Ref()] {
+			walk(c, d+1)
+		}
+	}
+	for _, it := range roots {
+		walk(it, 0)
+	}
+	for _, it := range items { // parent cycles: nothing is lost
+		walk(it, 0)
+	}
+	return out, depths
+}
+
 // rows flattens groups into table lines; an ungrouped view has no header lines.
-func rows(groups []group, grouped bool, collapsed map[string]bool) []row {
+func rows(groups []group, grouped bool, collapsed map[string]bool, hierarchy bool) []row {
 	var out []row
 	for gi, g := range groups {
 		if grouped {
@@ -135,18 +211,23 @@ func rows(groups []group, grouped bool, collapsed map[string]bool) []row {
 				continue
 			}
 		}
-		for _, it := range g.Items {
-			out = append(out, row{group: gi, item: it})
+		items, depths := g.Items, make([]int, len(g.Items))
+		if hierarchy {
+			items, depths = nest(g.Items)
+		}
+		for i, it := range items {
+			out = append(out, row{group: gi, item: it, depth: depths[i]})
 		}
 	}
 	return out
 }
 
-// columns picks the view's visible fields, Title first and the group field left out, as many as the breakpoint allows.
+// columns picks the view's visible fields in their order, Title first, as many as the breakpoint allows.
+// Like github.com, the group field stays a column when it is visible.
 func columns(v project.View, bp layout.Breakpoint) []string {
 	cols := []string{"Title"}
 	for _, f := range v.VisibleFields {
-		if f != "Title" && (len(v.GroupBy) == 0 || f != v.GroupBy[0]) {
+		if f != "Title" {
 			cols = append(cols, f)
 		}
 	}

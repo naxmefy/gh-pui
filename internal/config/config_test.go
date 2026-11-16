@@ -50,19 +50,44 @@ func TestLoadRejectsUnknownValues(t *testing.T) {
 	}
 }
 
-func TestChoicesRoundTrip(t *testing.T) {
+func TestProjectsRoundTripAndSettings(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
-	if c, err := LoadChoices(); err != nil || len(c) != 0 {
-		t.Fatalf("missing file: %v %v", c, err)
+	if p, err := LoadProjects(); err != nil || len(p.Repos) != 0 {
+		t.Fatalf("missing file: %v %v", p, err)
 	}
+	writeFile(t, "projects.yml", "projects:\n  acme/7:\n    sum: []\n    views:\n      Backlog: {hierarchy: false, slice: Priority}\n")
 	if err := SaveChoice("a/b", Choice{"a", 3}); err != nil {
 		t.Fatal(err)
 	}
-	if err := SaveChoice("c/d", Choice{"org", 7}); err != nil {
+	p, err := LoadProjects()
+	if err != nil || p.Repos["a/b"] != (Choice{"a", 3}) {
+		t.Fatalf("repos: %v %v", p.Repos, err)
+	}
+	s := p.Settings("acme", 7) // settings survive SaveChoice
+	if s.Sum == nil || len(*s.Sum) != 0 || *s.Views["Backlog"].Hierarchy || s.Views["Backlog"].Slice != "Priority" {
+		t.Errorf("settings: %+v", s)
+	}
+	if p.Settings("acme", 8).Sum != nil {
+		t.Error("unknown project should have no settings")
+	}
+}
+
+func TestProjectsReadsFirstFormat(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	writeFile(t, "projects.yml", "naxmefy/gh-pui:\n  owner: naxmefy\n  number: 18\n")
+	p, err := LoadProjects()
+	if err != nil || p.Repos["naxmefy/gh-pui"] != (Choice{"naxmefy", 18}) {
+		t.Errorf("got %v %v", p, err)
+	}
+}
+
+func writeFile(t *testing.T, name, content string) {
+	t.Helper()
+	dir := filepath.Join(os.Getenv("XDG_CONFIG_HOME"), "gh-pui")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	c, err := LoadChoices()
-	if err != nil || c["a/b"] != (Choice{"a", 3}) || c["c/d"] != (Choice{"org", 7}) {
-		t.Errorf("got %v %v", c, err)
+	if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o600); err != nil {
+		t.Fatal(err)
 	}
 }

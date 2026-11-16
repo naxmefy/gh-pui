@@ -1,16 +1,16 @@
  gh pui › acme › #7 App roadmap  6 items                                                                                                                  @mona
-  1 ▤ Backlog by status   2 ▤ All items  3 ▥ Board  4 ▬ Roadmap
-   TITLE                                                                                               ASSIGNEES  LABELS         ESTIMATE  MILESTONE  REPOSITORY
+  1 ▤ Backlog by status   2 ▤ All items  3 ▥ Board  4 ━ Roadmap
+   TITLE                                                                                            ASSIGNEES  STATUS         LABELS         ESTIMATE  MILESTONE
  ▾ ● Todo  2 items · Σ Estimate 5               ╭──────────────────────────────────────────────────────────────╮                                                
- ○ app#15 Crash when the cache directory is read│ Switch project                                               │  bug            2         —          acme/app
- ◌ draft Sketch the onboarding flow             │ All  This repo  Org  Me                                      │  —              3         —          —
+ ○ app#15 Crash when the cache directory is read│ Switch project                                               │ Todo         bug            2         —
+ ◌ draft Sketch the onboarding flow             │ All  This repo  Org  Me                                      │ Todo         —              3         —
  ▾ ● In Progress  1 item · Σ Estimate 5         │ > ▌                                                          │
- ○ app#12 Login with passkeys                   │                                                              │  auth, feature  5         v1.0       acme/app
+ ○ app#12 Login with passkeys                   │                                                              │ In Progress  auth, feature  5         v1.0
  ▾ ● Done  2 items · Σ Estimate 1               │ ▌ App roadmap                                                │
- ◆ app#18 Add passkey endpoints                 │ ▌ acme/#7                                                    │  —              —         —          acme/app
- ● app#9 Document the release process           │   Support queue                                              │  docs           1         v0.9       acme/app
+ ◆ app#18 Add passkey endpoints                 │ ▌ acme/#7                                                    │ Done         —              —         —
+ ● app#9 Document the release process           │   Support queue                                              │ Done         docs           1         v0.9
  ▾ No Status  1 item                            │   acme/#2                                                    │
- ○ app#21 Settings page                         │   Personal tasks                                             │  —              —         —          acme/app
+ ○ app#21 Settings page                         │   Personal tasks                                             │              —              —         —
                                                 │   mona/#1                                                    │
                                                 │                                                              │
                                                 │ tab scope · enter open · esc close                           │

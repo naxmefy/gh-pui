@@ -1,12 +1,12 @@
  gh pui › #7 App roadmap                                                  @mona 
- 1▤   2 ▤ All items   3▥  4▬
+ 1▤   2 ▤ All items   3▥  4━                                        Status: All 
    TITLE                                                           STATUS       
  ○ app#12 Login with passkeys                                      ● In Progress
-▌○ app#15 Crash when the cache directory is read-only              ● Todo       
+▌○ └ app#21 Settings page                                          —            
+ ○ app#15 Crash when the cache directory is read-only              ● Todo       
  ◌ draft Sketch the onboarding flow                                ● Todo       
  ◆ app#18 Add passkey endpoints                                    ● Done       
  ● app#9 Document the release process                              ● Done       
- ○ app#21 Settings page                                            —            
 
 
 
@@ -18,7 +18,7 @@
 
 
 ────────────────────────────────────────────────────────────────────────────────
- issue · acme/app#15 · open
- Crash when the cache directory is read-only
- Status: Todo · Assignees: hubot · Labels: bug
- TABLE   j/k move  h/l column  e edit  enter fold  tab view                 2/6 
+ issue · acme/app#21 · open
+ Settings page
+ Parent issue: #12 Login with passkeys
+ TABLE   j/k move  h/l column  e edit  enter fold  tab view  [/] slice      2/6 
