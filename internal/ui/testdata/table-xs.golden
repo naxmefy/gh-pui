@@ -1,16 +1,16 @@
  #7 App roadmap                             ▤ 1/4 
  ▾ ● Todo  2 · Σ Estimate 5
-▌○ app#15                               hubot bug 
+▌○ app#15                              hubot Todo 
    Crash when the cache directory is read-only    
- ◌ draft                                        3 
+ ◌ draft                                     Todo 
    Sketch the onboarding flow
  ▾ ● In Progress  1 · Σ Estimate 5
- ○ app#12                      mona auth, feature 
+ ○ app#12                        mona In Progress 
    Login with passkeys
  ▾ ● Done  2 · Σ Estimate 1
- ◆ app#18                                    mona 
+ ◆ app#18                               mona Done 
    Add passkey endpoints
- ● app#9                                   docs 1 
+ ● app#9                                Done docs 
    Document the release process
  ▾ No Status  1
  ○ app#21                                         

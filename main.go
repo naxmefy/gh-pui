@@ -90,7 +90,12 @@ func run() error {
 		inRepo, rerr := client.RepoProjects(repo)
 		return viewer, inRepo, errors.Join(err, rerr)
 	}
-	app := ui.NewApp(login, th, keys, ui.NewPicker(th, client.OwnerProjects, first), load, source, client.UpdateField, auto)
+	projects, err := config.LoadProjects()
+	if err != nil {
+		return err
+	}
+	app := ui.NewApp(login, th, keys, ui.NewPicker(th, client.OwnerProjects, first), load, source, client.UpdateField, auto).
+		WithSettings(projects.Settings)
 	_, err = tea.NewProgram(app).Run()
 	mu.Lock()
 	defer mu.Unlock()
@@ -118,10 +123,11 @@ func startPage(client *gh.Client, login, repo, owner string, number int) (ui.Pag
 		return ui.Page{}, nil, err
 	}
 	entries := ui.ProjectEntries(refs)
-	choices, err := config.LoadChoices()
+	projects, err := config.LoadProjects()
 	if err != nil {
 		return ui.Page{}, nil, err
 	}
+	choices := projects.Repos
 	for _, e := range entries { // a remembered project counts only while it is still linked and open
 		if c := choices[repo]; c.Owner == e.Ref.Owner && c.Number == e.Ref.Number {
 			return ui.Page{Title: repo, Entries: entries}, e.Ref, nil

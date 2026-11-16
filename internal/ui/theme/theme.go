@@ -41,12 +41,12 @@ var ansi = map[string]string{
 var symbolSets = map[string]map[string]string{
 	"unicode": {
 		"issue": "○", "issue.closed": "●", "pr": "◇", "pr.merged": "◆", "draft": "◌",
-		"expanded": "▾", "collapsed": "▸", "dot": "●", "bar": "▌", "sep": "›", "empty": "—",
-		"layout.table": "▤", "layout.board": "▥", "layout.roadmap": "▬",
+		"expanded": "▾", "collapsed": "▸", "dot": "●", "bar": "▌", "sep": "›", "empty": "—", "child": "└",
+		"layout.table": "▤", "layout.board": "▥", "layout.roadmap": "━",
 	},
 	"ascii": {
 		"issue": "o", "issue.closed": "x", "pr": "p", "pr.merged": "m", "draft": "d",
-		"expanded": "v", "collapsed": ">", "dot": "*", "bar": "|", "sep": ">", "empty": "-",
+		"expanded": "v", "collapsed": ">", "dot": "*", "bar": "|", "sep": ">", "empty": "-", "child": "\\",
 		"layout.table": "#", "layout.board": "|", "layout.roadmap": "=",
 	},
 }

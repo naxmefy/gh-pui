@@ -1,16 +1,16 @@
  gh pui › #7 App roadmap                                                                                          @mona 
-  1 ▤ Backlog by status   2 ▤ All items  3 ▥ Board  4 ▬ Roadmap
-   TITLE                                                                              ASSIGNEES  LABELS         ESTIMATE
+  1 ▤ Backlog by status   2 ▤ All items  3 ▥ Board  4 ━ Roadmap
+   TITLE                                                                         ASSIGNEES  STATUS         LABELS       
  ▾ ● Todo  2 items · Σ Estimate 5
-▌○ app#15 Crash when the cache directory is read-only                                 hubot      bug            2       
- ◌ draft Sketch the onboarding flow                                                   —          —              3       
+▌○ app#15 Crash when the cache directory is read-only                            hubot      ● Todo         bug          
+ ◌ draft Sketch the onboarding flow                                              —          ● Todo         —            
  ▾ ● In Progress  1 item · Σ Estimate 5
- ○ app#12 Login with passkeys                                                         mona       auth, feature  5       
+ ○ app#12 Login with passkeys                                                    mona       ● In Progress  auth, feature
  ▾ ● Done  2 items · Σ Estimate 1
- ◆ app#18 Add passkey endpoints                                                       mona       —              —       
- ● app#9 Document the release process                                                 —          docs           1       
+ ◆ app#18 Add passkey endpoints                                                  mona       ● Done         —            
+ ● app#9 Document the release process                                            —          ● Done         docs         
  ▾ No Status  1 item
- ○ app#21 Settings page                                                               —          —              —       
+ ○ app#21 Settings page                                                          —          —              —            
 
 
 

@@ -1,16 +1,16 @@
  #7 App roadmap                             ▤ 2/4 
  ○ app#12                        In Progress mona 
    Login with passkeys
-▌○ app#15                              Todo hubot 
-   Crash when the cache directory is read-only    
+▌○ app#21                                         
+   Settings page                                  
+ ○ app#15                              Todo hubot 
+   Crash when the cache directory is read-only
  ◌ draft                                   Todo 3 
    Sketch the onboarding flow
  ◆ app#18                               Done mona 
    Add passkey endpoints
  ● app#9                                   Done 1 
    Document the release process
- ○ app#21                                         
-   Settings page
 
 
 

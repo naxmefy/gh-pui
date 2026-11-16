@@ -1,6 +1,6 @@
  gh pui › acme › #7 App roadmap  6 items                                                                                                                                                          @mona
-  1 ▤ Backlog by status   2 ▤ All items  3 ▥ Board  4 ▬ Roadmap
-   TITLE                                                                                                                 ASSIGNEES  LABELS         ESTIMATE  MILESTONE  REPOSITORY  LINKED PULL REQUESTS
+  1 ▤ Backlog by status   2 ▤ All items  3 ▥ Board  4 ━ Roadmap
+   TITLE                                                                                                  ASSIGNEES  STATUS         LABELS         ESTIMATE  MILESTONE  REPOSITORY  LINKED PULL REQUESTS
  ▾ ● Todo  2 items · Σ Estimate 5                                   ╭──────────────────────────────────────────────────────────────╮                                                                    
  ○ app#15 Crash when the cache directory is read-only               │ Switch project                                               │bug            2         —          acme/app    —
  ◌ draft Sketch the onboarding flow                                 │ All  This repo  Org  Me                                      │—              3         —          —           —
@@ -21,4 +21,4 @@
 
 
 
- TABLE   j/k move  h/l column  e edit  enter fold  tab view  ctrl+p projects  q quit                                                                                                  row –/6 · col 1/7
+ TABLE   j/k move  h/l column  e edit  enter fold  tab view  ctrl+p projects  q quit                                                                                                  row –/6 · col 1/8

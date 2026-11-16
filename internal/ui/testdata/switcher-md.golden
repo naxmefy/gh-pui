@@ -1,16 +1,16 @@
  gh pui › #7 App roadmap                                                                                          @mona
-  1 ▤ Backlog by status   2 ▤ All items  3 ▥ Board  4 ▬ Roadmap
-   TITLE                                                                              ASSIGNEES  LABELS         ESTIMATE
+  1 ▤ Backlog by status   2 ▤ All items  3 ▥ Board  4 ━ Roadmap
+   TITLE                                                                         ASSIGNEES  STATUS         LABELS
  ▾ ● Todo  2 items · Σ Estim╭──────────────────────────────────────────────────────────────╮                            
- ○ app#15 Crash when the cac│ Switch project                                               │     bug            2
- ◌ draft Sketch the onboardi│ All  This repo  Org  Me                                      │     —              3
+ ○ app#15 Crash when the cac│ Switch project                                               │● Todo         bug
+ ◌ draft Sketch the onboardi│ All  This repo  Org  Me                                      │● Todo         —
  ▾ ● In Progress  1 item · Σ│ > ▌                                                          │
- ○ app#12 Login with passkey│                                                              │     auth, feature  5
+ ○ app#12 Login with passkey│                                                              │● In Progress  auth, feature
  ▾ ● Done  2 items · Σ Estim│ ▌ App roadmap                                                │
- ◆ app#18 Add passkey endpoi│ ▌ acme/#7                                                    │     —              —
- ● app#9 Document the releas│   Support queue                                              │     docs           1
+ ◆ app#18 Add passkey endpoi│ ▌ acme/#7                                                    │● Done         —
+ ● app#9 Document the releas│   Support queue                                              │● Done         docs
  ▾ No Status  1 item        │   acme/#2                                                    │
- ○ app#21 Settings page     │   Personal tasks                                             │     —              —
+ ○ app#21 Settings page     │   Personal tasks                                             │—              —
                             │   mona/#1                                                    │
                             │                                                              │
                             │ tab scope · enter open · esc close                           │

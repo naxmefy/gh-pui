@@ -144,12 +144,12 @@ const projectQuery = `query($owner:String!,$number:Int!,$after:String,$meta:Bool
       sortByFields(first:5) { nodes { direction field { ... on ProjectV2FieldCommon { name } } } }
       fields(first:50) { nodes { ... on ProjectV2FieldCommon { name } } }
     } }
-    items(first:100, after:$after) { pageInfo { hasNextPage endCursor } nodes {
+    items(first:100, after:$after, orderBy:{field:POSITION, direction:ASC}) { pageInfo { hasNextPage endCursor } nodes {
       id type isArchived
       content { __typename
         ... on DraftIssue { title }
         ... on Issue { title number state url repository { nameWithOwner }
-          parent { number title } subIssuesSummary { completed total } }
+          parent { number title repository { nameWithOwner } } subIssuesSummary { completed total } }
         ... on PullRequest { title number state url repository { nameWithOwner } }
       }
       fieldValues(first:50) { nodes { __typename
@@ -226,8 +226,9 @@ type rawItem struct {
 		Number            int
 		Repository        *struct{ NameWithOwner string }
 		Parent            *struct {
-			Number int
-			Title  string
+			Number     int
+			Title      string
+			Repository struct{ NameWithOwner string }
 		}
 		SubIssuesSummary *struct{ Completed, Total int }
 	}
@@ -330,6 +331,7 @@ func toItems(raw []rawItem) []project.Item {
 			// parent and sub-issue progress are not delivered as field values, so fill those fields from the issue itself
 			if c.Parent != nil {
 				it.Values["Parent issue"] = project.Value{Text: fmt.Sprintf("#%d %s", c.Parent.Number, c.Parent.Title)}
+				it.Parent = project.Ref(c.Parent.Repository.NameWithOwner, c.Parent.Number)
 			}
 			if c.SubIssuesSummary != nil && c.SubIssuesSummary.Total > 0 {
 				it.Values["Sub-issues progress"] = project.Value{Text: fmt.Sprintf("%d/%d", c.SubIssuesSummary.Completed, c.SubIssuesSummary.Total)}

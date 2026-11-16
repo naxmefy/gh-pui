@@ -57,7 +57,7 @@ func TestEditStatusThroughFieldChooser(t *testing.T) {
 
 func TestEditNumberInColumnUpdatesSums(t *testing.T) {
 	m, calls := newEditModel(t, nil)
-	m = drive(m, "j", "l", "e", "backspace", "8", "enter")
+	m = drive(m, "j", "l", "l", "e", "backspace", "8", "enter")
 	if len(*calls) != 1 || *(*calls)[0].v.Number != 8 {
 		t.Fatalf("calls %+v", *calls)
 	}
@@ -68,7 +68,7 @@ func TestEditNumberInColumnUpdatesSums(t *testing.T) {
 
 func TestEditRejectsBadNumberAndCancels(t *testing.T) {
 	m, calls := newEditModel(t, nil)
-	m = drive(m, "j", "l", "e", "x", "enter")
+	m = drive(m, "j", "l", "l", "e", "x", "enter")
 	if s := screen(m); !strings.Contains(s, `"5x" is not a number`) {
 		t.Fatalf("validation error missing:\n%s", s)
 	}
@@ -80,7 +80,7 @@ func TestEditRejectsBadNumberAndCancels(t *testing.T) {
 
 func TestSaveErrorRollsBack(t *testing.T) {
 	m, _ := newEditModel(t, errors.New("forbidden"))
-	m = drive(m, "j", "l", "e", "backspace", "9", "enter")
+	m = drive(m, "j", "l", "l", "e", "backspace", "9", "enter")
 	s := screen(m)
 	if !strings.Contains(s, "Estimate not saved: forbidden") || !strings.Contains(s, "Todo  2 items · Σ Estimate 6") {
 		t.Errorf("no rollback:\n%s", s)
