@@ -91,14 +91,13 @@ func (m Model) table() (groups []group, rs []row, grouped bool) {
 	if field, values, sel := m.sliceState(); sel > 0 {
 		items = sliceItems(items, field, values[sel-1])
 	}
-	fields := sumFields(m.project, m.settings.Sum)
-	groups = groupItems(m.project, v, items, fields)
+	// show hierarchy decides once which items are counted: groups hold only the top-level ones
+	var all []*project.Item
 	if m.hierarchy() {
-		for i := range groups {
-			groups[i].Sums = sums(topLevel(groups[i].Items), fields)
-		}
+		all, items = items, roots(items)
 	}
-	return groups, rows(groups, grouped, m.collapsed[m.view], m.hierarchy(), m.expanded), grouped
+	groups = groupItems(m.project, v, items, sumFields(m.settings.SumFor(v.Name)))
+	return groups, rows(groups, grouped, m.collapsed[m.view], all, m.expanded), grouped
 }
 
 func (m Model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
@@ -523,14 +522,21 @@ func (m Model) renderSlicePanel(height int) []string {
 	t := m.theme
 	field, values, sel := m.sliceState()
 	items := viewItems(m.project, m.currentView())
+	count := func(its []*project.Item) int { // same rule as the group count
+		if m.hierarchy() {
+			its = roots(its)
+		}
+		n, _ := tally(its, nil)
+		return n
+	}
 	labels := []string{"All"}
-	counts := []int{len(items)}
+	counts := []int{count(items)}
 	for _, v := range values {
 		label := v
 		if v == "" {
 			label = "No " + field
 		}
-		labels, counts = append(labels, label), append(counts, len(sliceItems(items, field, v)))
+		labels, counts = append(labels, label), append(counts, count(sliceItems(items, field, v)))
 	}
 	w := slicePanelWidth - 2
 	lines := []string{t.Fg("muted").Render(pad(" "+strings.ToUpper(field), w))}
@@ -623,16 +629,16 @@ func (m Model) renderRow(r row, groups []group, cols []string, widths []int, sel
 				dot = t.Fg(role).Render(t.Symbol("dot")) + " "
 			}
 		}
-		count := len(g.Items)
-		if m.hierarchy() {
-			count = len(topLevel(g.Items))
-		}
-		meta := []string{fmt.Sprintf("%d items", count)}
-		if count == 1 {
-			meta[0] = "1 item"
-		}
-		if m.bp == layout.XS {
-			meta = []string{strconv.Itoa(count)}
+		var meta []string
+		if m.settings.CountFor(m.currentView().Name) {
+			switch {
+			case m.bp == layout.XS:
+				meta = append(meta, strconv.Itoa(g.Count))
+			case g.Count == 1:
+				meta = append(meta, "1 item")
+			default:
+				meta = append(meta, fmt.Sprintf("%d items", g.Count))
+			}
 		}
 		for _, s := range g.Sums {
 			meta = append(meta, "Σ "+s.Field+" "+strconv.FormatFloat(s.Value, 'f', -1, 64))

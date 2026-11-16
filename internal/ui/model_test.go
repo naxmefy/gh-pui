@@ -22,7 +22,8 @@ func newTestModel(t *testing.T) tea.Model {
 		{Number: 1, Name: "By status", GroupBy: []string{"Status"}, VisibleFields: []string{"Title", "Status", "Estimate"}},
 		{Number: 2, Name: "Todo only", ItemIDs: []string{"b", "d"}, VisibleFields: []string{"Title"}},
 	}
-	m, _ := tea.Model(NewModel("me", p, th, keys)).Update(tea.WindowSizeMsg{Width: 100, Height: 30})
+	m, _ := tea.Model(NewModel("me", p, th, keys).WithSettings(config.ProjectSettings{Sum: &[]string{"Estimate"}})).
+		Update(tea.WindowSizeMsg{Width: 100, Height: 30})
 	return m
 }
 
@@ -130,7 +131,8 @@ func TestHierarchyFoldFromSubIssueAndTopLevelSums(t *testing.T) {
 			{ID: "c", Title: "Child", Repo: "r/x", Number: 2, Parent: "r/x#1", Values: map[string]project.Value{"Status": todo, "Estimate": {Text: "3", Number: num(3)}}},
 		},
 	}
-	m, _ := NewModel("me", p, th, keys).Update(tea.WindowSizeMsg{Width: 100, Height: 30})
+	m, _ := NewModel("me", p, th, keys).WithSettings(config.ProjectSettings{Sum: &[]string{"Estimate"}}).
+		Update(tea.WindowSizeMsg{Width: 100, Height: 30})
 	if s := screen(m); !strings.Contains(s, "Todo  1 item · Σ Estimate 5") || strings.Contains(s, "Child") {
 		t.Fatalf("sub-issue should be hidden and left out of count and sum:\n%s", s)
 	}
@@ -144,5 +146,34 @@ func TestHierarchyFoldFromSubIssueAndTopLevelSums(t *testing.T) {
 	}
 	if c := m.(Model).cursor; c != 1 {
 		t.Errorf("cursor = %d, want 1 (the parent)", c)
+	}
+}
+
+// TestSubIssueCountsUnderItsParentsGroup mirrors naxmefy/18 on github.com: a Done sub-issue of a Todo parent
+// shows under the parent and is neither counted nor summed in Done; a group of only such items disappears.
+func TestSubIssueCountsUnderItsParentsGroup(t *testing.T) {
+	th, _ := theme.New(config.Default(), "none")
+	keys, _ := NewKeyMap(nil)
+	val := func(status string, est float64) map[string]project.Value {
+		return map[string]project.Value{"Status": {Text: status}, "Estimate": {Text: "x", Number: num(est)}}
+	}
+	p := &project.Project{
+		Fields: []project.Field{{Name: "Status", DataType: "SINGLE_SELECT", Options: []project.Option{{Name: "Todo"}, {Name: "Done"}}}, {Name: "Estimate", DataType: "NUMBER"}},
+		Views:  []project.View{{Name: "v", GroupBy: []string{"Status"}, VisibleFields: []string{"Title"}}},
+		Items: []project.Item{
+			{ID: "e", Title: "Epic", Repo: "r/x", Number: 1, Values: map[string]project.Value{"Status": {Text: "Todo"}}},
+			{ID: "t", Title: "Task", Repo: "r/x", Number: 2, Values: val("Todo", 8)},
+			{ID: "d", Title: "DoneSub", Repo: "r/x", Number: 3, Parent: "r/x#1", Values: val("Done", 5)},
+		},
+	}
+	m, _ := NewModel("me", p, th, keys).WithSettings(config.ProjectSettings{Sum: &[]string{"Estimate"}}).
+		Update(tea.WindowSizeMsg{Width: 100, Height: 30})
+	s := screen(m)
+	if !strings.Contains(s, "Todo  2 items · Σ Estimate 8") || strings.Contains(s, "Done") {
+		t.Errorf("want Todo 2 items Σ 8 and no Done group:\n%s", s)
+	}
+	m = press(m, "j", "enter")
+	if s := screen(m); !strings.Contains(s, "└ x#3 DoneSub") {
+		t.Errorf("the Done sub-issue should show under its Todo parent:\n%s", s)
 	}
 }

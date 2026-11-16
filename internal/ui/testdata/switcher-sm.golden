@@ -5,12 +5,12 @@
  ○ app#1│ Switch project                                               │ubot
  ◌ draft│ All  This repo  Org  Me                                      │
  ▾ ● In │ > ▌                                                          │
- ○ app#1│                                                              │ona
+ ○ ▸ app│                                                              │ona
  ▾ ● Don│ ▌ App roadmap                                                │
  ◆ app#1│ ▌ acme/#7                                                    │ona
  ● app#9│   Support queue                                              │
- ▾ No St│   acme/#2                                                    │
- ○ app#2│   Personal tasks                                             │
+        │   acme/#2                                                    │
+        │   Personal tasks                                             │
         │   mona/#1                                                    │
         │                                                              │
         │ tab scope · enter open · esc close                           │
@@ -21,4 +21,4 @@
 
 
 
- TABLE   j/k move  h/l column  e edit  enter fold  tab view                 –/6
+ TABLE   j/k move  h/l column  e edit  enter fold  tab view                 –/5

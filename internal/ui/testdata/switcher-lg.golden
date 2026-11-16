@@ -1,16 +1,16 @@
  gh pui › acme › #7 App roadmap  6 items                                                                                                                  @mona
   1 ▤ Backlog by status   2 ▤ All items  3 ▥ Board  4 ━ Roadmap
    TITLE                                                                                            ASSIGNEES  STATUS         LABELS         ESTIMATE  MILESTONE
- ▾ ● Todo  2 items · Σ Estimate 5               ╭──────────────────────────────────────────────────────────────╮                                                
+ ▾ ● Todo  2 items                              ╭──────────────────────────────────────────────────────────────╮                                                
  ○ app#15 Crash when the cache directory is read│ Switch project                                               │ Todo         bug            2         —
  ◌ draft Sketch the onboarding flow             │ All  This repo  Org  Me                                      │ Todo         —              3         —
- ▾ ● In Progress  1 item · Σ Estimate 5         │ > ▌                                                          │
- ○ app#12 Login with passkeys                   │                                                              │ In Progress  auth, feature  5         v1.0
- ▾ ● Done  2 items · Σ Estimate 1               │ ▌ App roadmap                                                │
+ ▾ ● In Progress  1 item                        │ > ▌                                                          │
+ ○ ▸ app#12 Login with passkeys                 │                                                              │ In Progress  auth, feature  5         v1.0
+ ▾ ● Done  2 items                              │ ▌ App roadmap                                                │
  ◆ app#18 Add passkey endpoints                 │ ▌ acme/#7                                                    │ Done         —              —         —
  ● app#9 Document the release process           │   Support queue                                              │ Done         docs           1         v0.9
- ▾ No Status  1 item                            │   acme/#2                                                    │
- ○ app#21 Settings page                         │   Personal tasks                                             │              —              —         —
+                                                │   acme/#2                                                    │
+                                                │   Personal tasks                                             │
                                                 │   mona/#1                                                    │
                                                 │                                                              │
                                                 │ tab scope · enter open · esc close                           │
@@ -21,4 +21,4 @@
 
 
 
- TABLE   j/k move  h/l column  e edit  enter fold  tab view  ctrl+p projects  q quit                                                          row –/6 · col 1/6
+ TABLE   j/k move  h/l column  e edit  enter fold  tab view  ctrl+p projects  q quit                                                          row –/5 · col 1/6
